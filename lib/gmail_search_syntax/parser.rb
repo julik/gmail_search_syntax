@@ -216,6 +216,8 @@ module GmailSearchSyntax
         value
       when :lparen
         parse_parentheses
+      when :lbrace
+        parse_braces
       else
         nil
       end

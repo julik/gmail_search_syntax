@@ -13,7 +13,11 @@ queries = [
   "holiday AROUND 10 vacation",
   'from:manager subject:"quarterly review" after:2024/01/01',
   "is:unread label:important -label:spam",
-  "(from:team OR from:boss) subject:urgent"
+  "(from:team OR from:boss) subject:urgent",
+  "from:(mischa@ OR julik@) subject:meeting",
+  "to:(alice@ OR bob@ OR charlie@)",
+  "from:{mischa@ marc@}",
+  "from:{alice@ bob@} to:{charlie@ david@}"
 ]
 
 queries.each do |query|

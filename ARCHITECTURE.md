@@ -240,15 +240,57 @@ AST:   Operator("subject",
        )
 ```
 
+### OR/AND Inside Operator Values
+
+**Using Parentheses with OR:**
+```ruby
+Input: "from:(mischa@ OR julik@)"
+AST:   Operator("from",
+         Or([
+           Text("mischa@"),
+           Text("julik@")
+         ])
+       )
+```
+
+**Using Curly Braces (implicit OR):**
+```ruby
+Input: "from:{mischa@ marc@}"
+AST:   Operator("from",
+         Or([
+           Text("mischa@"),
+           Text("marc@")
+         ])
+       )
+```
+
+**Combined with Other Conditions:**
+```ruby
+Input: "from:(alice@ OR bob@) subject:meeting"
+AST:   And([
+         Operator("from",
+           Or([
+             Text("alice@"),
+             Text("bob@")
+           ])
+         ),
+         Operator("subject", "meeting")
+       ])
+```
+
 ## Testing
 
 The parser includes comprehensive test coverage:
 
-- **70 tests** across two test suites
-- **346 assertions** verifying behavior
+- **84 tests** across two test suites
+- **460 assertions** verifying behavior
 - Tests for all operators from Gmail documentation
 - Edge case handling (empty queries, nested groups, etc.)
 - Separate tokenizer tests with strict order verification
+- Tests for complex expressions inside operator values:
+  - OR/AND with parentheses
+  - OR with curly braces (implicit OR)
+  - Mixed parentheses and curly braces
 
 Run tests:
 ```bash

@@ -497,4 +497,195 @@ class GmailSearchSyntaxTest < Minitest::Test
     assert_equal "smaller", ast.name
     assert_equal "1M", ast.value
   end
+
+  def test_or_inside_operator_value
+    ast = GmailSearchSyntax.parse!("from:(mischa@ OR julik@)")
+    assert_instance_of Operator, ast
+    assert_equal "from", ast.name
+    
+    assert_instance_of Or, ast.value
+    assert_equal 2, ast.value.operands.length
+    assert_instance_of Text, ast.value.operands[0]
+    assert_equal "mischa@", ast.value.operands[0].value
+    assert_instance_of Text, ast.value.operands[1]
+    assert_equal "julik@", ast.value.operands[1].value
+  end
+
+  def test_or_with_emails_inside_operator
+    ast = GmailSearchSyntax.parse!("from:(amy@example.com OR bob@example.com)")
+    assert_instance_of Operator, ast
+    assert_equal "from", ast.name
+    
+    assert_instance_of Or, ast.value
+    assert_equal 2, ast.value.operands.length
+    assert_instance_of Text, ast.value.operands[0]
+    assert_equal "amy@example.com", ast.value.operands[0].value
+    assert_instance_of Text, ast.value.operands[1]
+    assert_equal "bob@example.com", ast.value.operands[1].value
+  end
+
+  def test_multiple_or_inside_operator
+    ast = GmailSearchSyntax.parse!("from:(a@ OR b@ OR c@)")
+    assert_instance_of Operator, ast
+    assert_equal "from", ast.name
+    
+    assert_instance_of Or, ast.value
+    assert_equal 3, ast.value.operands.length
+    assert_equal "a@", ast.value.operands[0].value
+    assert_equal "b@", ast.value.operands[1].value
+    assert_equal "c@", ast.value.operands[2].value
+  end
+
+  def test_and_inside_operator_value
+    ast = GmailSearchSyntax.parse!("subject:(urgent AND meeting)")
+    assert_instance_of Operator, ast
+    assert_equal "subject", ast.name
+    
+    assert_instance_of And, ast.value
+    assert_equal 2, ast.value.operands.length
+    assert_instance_of Text, ast.value.operands[0]
+    assert_equal "urgent", ast.value.operands[0].value
+    assert_instance_of Text, ast.value.operands[1]
+    assert_equal "meeting", ast.value.operands[1].value
+  end
+
+  def test_operator_with_or_combined_with_other_conditions
+    ast = GmailSearchSyntax.parse!("from:(alice@ OR bob@) subject:meeting")
+    assert_instance_of And, ast
+    
+    assert_equal 2, ast.operands.length
+    assert_instance_of Operator, ast.operands[0]
+    assert_equal "from", ast.operands[0].name
+    assert_instance_of Or, ast.operands[0].value
+    
+    assert_instance_of Operator, ast.operands[1]
+    assert_equal "subject", ast.operands[1].name
+    assert_equal "meeting", ast.operands[1].value
+  end
+
+  def test_negation_inside_operator_value
+    ast = GmailSearchSyntax.parse!("subject:(meeting -cancelled)")
+    assert_instance_of Operator, ast
+    assert_equal "subject", ast.name
+    
+    assert_instance_of And, ast.value
+    assert_equal 2, ast.value.operands.length
+    assert_instance_of Text, ast.value.operands[0]
+    assert_equal "meeting", ast.value.operands[0].value
+    assert_instance_of Not, ast.value.operands[1]
+    assert_equal "cancelled", ast.value.operands[1].child.value
+  end
+
+  def test_complex_expression_inside_operator
+    ast = GmailSearchSyntax.parse!("from:(alice@ OR bob@) to:(charlie@ OR david@)")
+    assert_instance_of And, ast
+    
+    assert_equal 2, ast.operands.length
+    
+    assert_instance_of Operator, ast.operands[0]
+    assert_equal "from", ast.operands[0].name
+    assert_instance_of Or, ast.operands[0].value
+    assert_equal 2, ast.operands[0].value.operands.length
+    
+    assert_instance_of Operator, ast.operands[1]
+    assert_equal "to", ast.operands[1].name
+    assert_instance_of Or, ast.operands[1].value
+    assert_equal 2, ast.operands[1].value.operands.length
+  end
+
+  def test_nested_parentheses_in_operator_value
+    ast = GmailSearchSyntax.parse!("subject:((urgent OR important) meeting)")
+    assert_instance_of Operator, ast
+    assert_equal "subject", ast.name
+    
+    assert_instance_of And, ast.value
+    assert_equal 2, ast.value.operands.length
+    assert_instance_of Or, ast.value.operands[0]
+    assert_equal 2, ast.value.operands[0].operands.length
+    assert_equal "urgent", ast.value.operands[0].operands[0].value
+    assert_equal "important", ast.value.operands[0].operands[1].value
+    assert_instance_of Text, ast.value.operands[1]
+    assert_equal "meeting", ast.value.operands[1].value
+  end
+
+  def test_curly_braces_inside_operator_value
+    ast = GmailSearchSyntax.parse!("from:{mischa@ marc@}")
+    assert_instance_of Operator, ast
+    assert_equal "from", ast.name
+    
+    assert_instance_of Or, ast.value
+    assert_equal 2, ast.value.operands.length
+    assert_instance_of Text, ast.value.operands[0]
+    assert_equal "mischa@", ast.value.operands[0].value
+    assert_instance_of Text, ast.value.operands[1]
+    assert_equal "marc@", ast.value.operands[1].value
+  end
+
+  def test_curly_braces_with_emails_inside_operator
+    ast = GmailSearchSyntax.parse!("from:{amy@example.com bob@example.com}")
+    assert_instance_of Operator, ast
+    assert_equal "from", ast.name
+    
+    assert_instance_of Or, ast.value
+    assert_equal 2, ast.value.operands.length
+    assert_equal "amy@example.com", ast.value.operands[0].value
+    assert_equal "bob@example.com", ast.value.operands[1].value
+  end
+
+  def test_multiple_items_in_curly_braces
+    ast = GmailSearchSyntax.parse!("from:{a@ b@ c@ d@}")
+    assert_instance_of Operator, ast
+    assert_equal "from", ast.name
+    
+    assert_instance_of Or, ast.value
+    assert_equal 4, ast.value.operands.length
+    assert_equal "a@", ast.value.operands[0].value
+    assert_equal "b@", ast.value.operands[1].value
+    assert_equal "c@", ast.value.operands[2].value
+    assert_equal "d@", ast.value.operands[3].value
+  end
+
+  def test_curly_braces_combined_with_other_conditions
+    ast = GmailSearchSyntax.parse!("from:{alice@ bob@} subject:meeting")
+    assert_instance_of And, ast
+    
+    assert_equal 2, ast.operands.length
+    assert_instance_of Operator, ast.operands[0]
+    assert_equal "from", ast.operands[0].name
+    assert_instance_of Or, ast.operands[0].value
+    assert_equal 2, ast.operands[0].value.operands.length
+    
+    assert_instance_of Operator, ast.operands[1]
+    assert_equal "subject", ast.operands[1].name
+    assert_equal "meeting", ast.operands[1].value
+  end
+
+  def test_multiple_operators_with_curly_braces
+    ast = GmailSearchSyntax.parse!("from:{alice@ bob@} to:{charlie@ david@}")
+    assert_instance_of And, ast
+    
+    assert_equal 2, ast.operands.length
+    
+    assert_instance_of Operator, ast.operands[0]
+    assert_equal "from", ast.operands[0].name
+    assert_instance_of Or, ast.operands[0].value
+    
+    assert_instance_of Operator, ast.operands[1]
+    assert_equal "to", ast.operands[1].name
+    assert_instance_of Or, ast.operands[1].value
+  end
+
+  def test_mixing_parentheses_and_curly_braces
+    ast = GmailSearchSyntax.parse!("from:{alice@ bob@} subject:(urgent meeting)")
+    assert_instance_of And, ast
+    
+    assert_equal 2, ast.operands.length
+    assert_instance_of Operator, ast.operands[0]
+    assert_equal "from", ast.operands[0].name
+    assert_instance_of Or, ast.operands[0].value
+    
+    assert_instance_of Operator, ast.operands[1]
+    assert_equal "subject", ast.operands[1].name
+    assert_instance_of And, ast.operands[1].value
+  end
 end
