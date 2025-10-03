@@ -1,6 +1,8 @@
+require_relative "lib/gmail_search_syntax/version"
+
 Gem::Specification.new do |s|
   s.name = "gmail_search_syntax"
-  s.version = "0.1.0"
+  s.version = GmailSearchSyntax::VERSION
   s.summary = "Gmail search syntax parser"
   s.authors = ["me@julik.nl"]
   s.license = "MIT"
