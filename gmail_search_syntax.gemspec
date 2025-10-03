@@ -6,7 +6,7 @@ Gem::Specification.new do |s|
   s.license = "MIT"
   s.homepage = "https://github.com/julik/gmail_search_syntax"
   s.required_ruby_version = ">= 3.0"
-  
+
   s.files = Dir[
     "lib/**/*.{rb,md}",
     "test/**/*.rb",
