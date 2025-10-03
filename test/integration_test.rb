@@ -3,6 +3,8 @@ require "sqlite3"
 require "yaml"
 
 class IntegrationTest < Minitest::Test
+  include GmailMessageIdHelper
+
   def setup
     @db = SQLite3::Database.new(":memory:")
     create_tables
@@ -308,10 +310,12 @@ class IntegrationTest < Minitest::Test
     now = Time.now
 
     100.times do |i|
-      message_id = "msg_#{i}_#{rand(1000000)}"
-      rfc822_id = "#{rand(1000000)}@example.com"
-
       internal_date = Time.at(rand(two_years_ago.to_i..now.to_i))
+
+      # Generate Gmail-style message ID based on timestamp
+      # https://www.metaspike.com/dates-gmail-message-id-thread-id-timestamps/
+      message_id = generate_gmail_message_id(internal_date)
+      rfc822_id = "#{rand(1000000)}@example.com"
 
       subject = subjects.sample + " ##{i}"
       body = "This is the body of message #{i}. " + ("Lorem ipsum dolor sit amet. " * 10)
@@ -596,5 +600,69 @@ class IntegrationTest < Minitest::Test
     end
 
     debug "\nFound #{rows.length} messages larger than 1M"
+  end
+
+  def test_gmail_message_ids_encode_timestamps
+    # Test that our generated message IDs follow Gmail's pattern
+    # Reference: https://www.metaspike.com/dates-gmail-message-id-thread-id-timestamps/
+
+    rows = @db.execute("SELECT id, internal_date FROM messages LIMIT 5")
+
+    rows.each do |message_id, internal_date_str|
+      internal_date = Time.parse(internal_date_str)
+
+      # Gmail message IDs should be 15-16 hex digits
+      assert message_id.match?(/^[0-9a-f]{15,16}$/), "Message ID should be 15-16 hex digits: #{message_id}"
+
+      # Decode the timestamp from the message ID (drop last 5 digits, convert from hex)
+      timestamp_hex = message_id[0..-6] # Drop last 5 digits
+      decoded_timestamp_ms = timestamp_hex.to_i(16)
+      decoded_time = Time.at(decoded_timestamp_ms / 1000.0)
+
+      # The decoded timestamp should be very close to the internal_date
+      # Allow a small margin of error due to timing
+      time_diff = (decoded_time - internal_date).abs
+      assert time_diff < 1, "Decoded timestamp should match internal_date within 1 second. " \
+                            "Message ID: #{message_id}, Internal: #{internal_date}, Decoded: #{decoded_time}, Diff: #{time_diff}s"
+
+      debug "\nMessage ID #{message_id} decodes to #{decoded_time} (internal_date: #{internal_date})"
+    end
+  end
+
+  def test_gmail_message_id_with_seeded_random
+    # Test that the random: parameter allows reproducible message IDs
+    test_time = Time.parse("2024-06-15 12:00:00 UTC")
+
+    # Generate two IDs with the same seed - should be identical
+    seeded_random1 = Random.new(12345)
+    id1 = generate_gmail_message_id(test_time, random: seeded_random1)
+
+    seeded_random2 = Random.new(12345)
+    id2 = generate_gmail_message_id(test_time, random: seeded_random2)
+
+    assert_equal id1, id2, "Same seed should produce same message ID"
+
+    # Generate two IDs with different seeds - should be different
+    seeded_random3 = Random.new(11111)
+    seeded_random4 = Random.new(22222)
+    id3 = generate_gmail_message_id(test_time, random: seeded_random3)
+    id4 = generate_gmail_message_id(test_time, random: seeded_random4)
+
+    refute_equal id3, id4, "Different seeds should produce different message IDs"
+
+    # All should decode to the same timestamp
+    [id1, id2, id3, id4].each do |msg_id|
+      timestamp_hex = msg_id[0..-6]
+      decoded_timestamp_ms = timestamp_hex.to_i(16)
+      decoded_time = Time.at(decoded_timestamp_ms / 1000.0)
+
+      time_diff = (decoded_time - test_time).abs
+      assert time_diff < 1, "All IDs should decode to the same timestamp"
+    end
+
+    debug "\nSeeded ID 1: #{id1}"
+    debug "Seeded ID 2: #{id2}"
+    debug "Seeded ID 3: #{id3}"
+    debug "Seeded ID 4: #{id4}"
   end
 end
