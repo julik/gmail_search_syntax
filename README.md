@@ -24,6 +24,8 @@ ast = GmailSearchSyntax.parse!("from:boss subject:meeting")
 # => #<And #<Operator from: "boss"> AND #<Operator subject: "meeting">>
 ```
 
+Afterwards you can do all sorts of interesting things with this, for example - transform your AST nodes into Elastic or SQL queries, or execute them bottom-op just from arrays in memory.
+
 ### Examples
 
 ```ruby
