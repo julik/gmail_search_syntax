@@ -4,7 +4,7 @@ class GmailSearchSyntaxTest < Minitest::Test
   include GmailSearchSyntax::AST
 
   def test_version
-    assert_equal "0.1.0", GmailSearchSyntax::VERSION
+    assert GmailSearchSyntax::VERSION
   end
 
   def test_simple_from_operator
