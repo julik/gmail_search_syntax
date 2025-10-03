@@ -3,71 +3,91 @@ require "test_helper"
 class GmailSearchSyntaxTest < Minitest::Test
   include GmailSearchSyntax::AST
 
+  def assert_operator(expected_properties, actual_operator)
+    assert_instance_of Operator, actual_operator, "Expected Operator, got #{actual_operator.class}"
+    expected_properties.each do |property, expected_value|
+      actual_value = actual_operator.public_send(property)
+      if property == :operands && expected_value.is_a?(Array)
+        assert_equal expected_value.length, actual_value.length, "Expected #{expected_value.length} operands, got #{actual_value.length}"
+        expected_value.each_with_index do |expected_operand, index|
+          if expected_operand.is_a?(Hash)
+            if expected_operand.key?(:name) && expected_operand.key?(:value)
+              # This is an Operator specification
+              assert_operator(expected_operand, actual_value[index])
+            elsif expected_operand.key?(:value)
+              # This is a StringToken specification
+              assert_string_token(expected_operand, actual_value[index])
+            else
+              # Generic node assertion
+              assert_equal expected_operand, actual_value[index], "Operand #{index}: expected #{expected_operand.inspect}, got #{actual_value[index].inspect}"
+            end
+          else
+            assert_equal expected_operand, actual_value[index], "Operand #{index}: expected #{expected_operand.inspect}, got #{actual_value[index].inspect}"
+          end
+        end
+      elsif expected_value.is_a?(Class)
+        assert_instance_of expected_value, actual_value, "Operator: expected #{property} to be instance of #{expected_value}, got #{actual_value.class}"
+      else
+        assert_equal expected_value, actual_value, "Operator: expected #{property} to be #{expected_value.inspect}, got #{actual_value.inspect}"
+      end
+    end
+  end
+
+  def assert_string_token(expected_properties, actual_string_token)
+    assert_instance_of StringToken, actual_string_token, "Expected StringToken, got #{actual_string_token.class}"
+    expected_properties.each do |property, expected_value|
+      actual_value = actual_string_token.public_send(property)
+      assert_equal expected_value, actual_value, "StringToken: expected #{property} to be #{expected_value.inspect}, got #{actual_value.inspect}"
+    end
+  end
+
   def test_version
     assert GmailSearchSyntax::VERSION
   end
 
   def test_simple_from_operator
     ast = GmailSearchSyntax.parse!("from:amy@example.com")
-    assert_instance_of Operator, ast
-    assert_equal "from", ast.name
-    assert_equal "amy@example.com", ast.value
+    assert_operator({name: "from", value: "amy@example.com"}, ast)
   end
 
   def test_from_me
     ast = GmailSearchSyntax.parse!("from:me")
-    assert_instance_of Operator, ast
-    assert_equal "from", ast.name
-    assert_equal "me", ast.value
+    assert_operator({name: "from", value: "me"}, ast)
   end
 
   def test_to_operator
     ast = GmailSearchSyntax.parse!("to:john@example.com")
-    assert_instance_of Operator, ast
-    assert_equal "to", ast.name
-    assert_equal "john@example.com", ast.value
+    assert_operator({name: "to", value: "john@example.com"}, ast)
   end
 
   def test_subject_with_single_word
     ast = GmailSearchSyntax.parse!("subject:dinner")
-    assert_instance_of Operator, ast
-    assert_equal "subject", ast.name
-    assert_equal "dinner", ast.value
+    assert_operator({name: "subject", value: "dinner"}, ast)
   end
 
   def test_subject_with_quoted_phrase
     ast = GmailSearchSyntax.parse!('subject:"anniversary party"')
-    assert_instance_of Operator, ast
-    assert_equal "subject", ast.name
-    assert_equal "anniversary party", ast.value
+    assert_operator({name: "subject", value: "anniversary party"}, ast)
   end
 
   def test_after_date
     ast = GmailSearchSyntax.parse!("after:2004/04/16")
-    assert_instance_of Operator, ast
-    assert_equal "after", ast.name
-    assert_equal "2004/04/16", ast.value
+    assert_operator({name: "after", value: "2004/04/16"}, ast)
   end
 
   def test_before_date
     ast = GmailSearchSyntax.parse!("before:04/18/2004")
-    assert_instance_of Operator, ast
-    assert_equal "before", ast.name
-    assert_equal "04/18/2004", ast.value
+    assert_operator({name: "before", value: "04/18/2004"}, ast)
   end
 
   def test_older_than_relative
     ast = GmailSearchSyntax.parse!("older_than:1y")
-    assert_instance_of Operator, ast
-    assert_equal "older_than", ast.name
-    assert_equal "1y", ast.value
+    assert_operator({name: "older_than", value: "1y"}, ast)
   end
 
   def test_newer_than_relative
     ast = GmailSearchSyntax.parse!("newer_than:2d")
-    assert_instance_of Operator, ast
-    assert_equal "newer_than", ast.name
-    assert_equal "2d", ast.value
+    assert_operator({name: "newer_than", value: "2d"}, ast)
   end
 
   def test_or_operator_with_from
@@ -75,13 +95,8 @@ class GmailSearchSyntaxTest < Minitest::Test
     assert_instance_of Or, ast
 
     assert_equal 2, ast.operands.length
-    assert_instance_of Operator, ast.operands[0]
-    assert_equal "from", ast.operands[0].name
-    assert_equal "amy", ast.operands[0].value
-
-    assert_instance_of Operator, ast.operands[1]
-    assert_equal "from", ast.operands[1].name
-    assert_equal "david", ast.operands[1].value
+    assert_operator({name: "from", value: "amy"}, ast.operands[0])
+    assert_operator({name: "from", value: "david"}, ast.operands[1])
   end
 
   def test_braces_as_or
@@ -89,13 +104,8 @@ class GmailSearchSyntaxTest < Minitest::Test
     assert_instance_of Or, ast
 
     assert_equal 2, ast.operands.length
-    assert_instance_of Operator, ast.operands[0]
-    assert_equal "from", ast.operands[0].name
-    assert_equal "amy", ast.operands[0].value
-
-    assert_instance_of Operator, ast.operands[1]
-    assert_equal "from", ast.operands[1].name
-    assert_equal "david", ast.operands[1].value
+    assert_operator({name: "from", value: "amy"}, ast.operands[0])
+    assert_operator({name: "from", value: "david"}, ast.operands[1])
   end
 
   def test_and_operator
@@ -103,13 +113,8 @@ class GmailSearchSyntaxTest < Minitest::Test
     assert_instance_of And, ast
 
     assert_equal 2, ast.operands.length
-    assert_instance_of Operator, ast.operands[0]
-    assert_equal "from", ast.operands[0].name
-    assert_equal "amy", ast.operands[0].value
-
-    assert_instance_of Operator, ast.operands[1]
-    assert_equal "to", ast.operands[1].name
-    assert_equal "david", ast.operands[1].value
+    assert_operator({name: "from", value: "amy"}, ast.operands[0])
+    assert_operator({name: "to", value: "david"}, ast.operands[1])
   end
 
   def test_implicit_and
@@ -157,37 +162,27 @@ class GmailSearchSyntaxTest < Minitest::Test
 
   def test_label_operator
     ast = GmailSearchSyntax.parse!("label:friends")
-    assert_instance_of Operator, ast
-    assert_equal "label", ast.name
-    assert_equal "friends", ast.value
+    assert_operator({name: "label", value: "friends"}, ast)
   end
 
   def test_category_operator
     ast = GmailSearchSyntax.parse!("category:primary")
-    assert_instance_of Operator, ast
-    assert_equal "category", ast.name
-    assert_equal "primary", ast.value
+    assert_operator({name: "category", value: "primary"}, ast)
   end
 
   def test_has_attachment
     ast = GmailSearchSyntax.parse!("has:attachment")
-    assert_instance_of Operator, ast
-    assert_equal "has", ast.name
-    assert_equal "attachment", ast.value
+    assert_operator({name: "has", value: "attachment"}, ast)
   end
 
   def test_filename_operator
     ast = GmailSearchSyntax.parse!("filename:pdf")
-    assert_instance_of Operator, ast
-    assert_equal "filename", ast.name
-    assert_equal "pdf", ast.value
+    assert_operator({name: "filename", value: "pdf"}, ast)
   end
 
   def test_filename_with_extension
     ast = GmailSearchSyntax.parse!("filename:homework.txt")
-    assert_instance_of Operator, ast
-    assert_equal "filename", ast.name
-    assert_equal "homework.txt", ast.value
+    assert_operator({name: "filename", value: "homework.txt"}, ast)
   end
 
   def test_quoted_exact_phrase
@@ -198,52 +193,37 @@ class GmailSearchSyntaxTest < Minitest::Test
 
   def test_parentheses_grouping
     ast = GmailSearchSyntax.parse!("subject:(dinner movie)")
-    assert_instance_of Operator, ast
-    assert_equal "subject", ast.name
-
-    assert_instance_of And, ast.value
+    assert_operator({name: "subject", value: And}, ast)
     assert_equal 2, ast.value.operands.length
-    assert_instance_of StringToken, ast.value.operands[0]
-    assert_equal "dinner", ast.value.operands[0].value
-    assert_instance_of StringToken, ast.value.operands[1]
-    assert_equal "movie", ast.value.operands[1].value
+    assert_string_token({value: "dinner"}, ast.value.operands[0])
+    assert_string_token({value: "movie"}, ast.value.operands[1])
   end
 
   def test_in_anywhere
     # With Gmail-compatible bareword consumption, "movie" gets consumed into operator value
     # To search for "movie" as text, use: in:anywhere "movie" or use a different operator after
     ast = GmailSearchSyntax.parse!("in:anywhere movie")
-    assert_instance_of Operator, ast
-    assert_equal "in", ast.name
-    assert_equal "anywhere movie", ast.value
+    assert_operator({name: "in", value: "anywhere movie"}, ast)
   end
 
   def test_is_starred
     ast = GmailSearchSyntax.parse!("is:starred")
-    assert_instance_of Operator, ast
-    assert_equal "is", ast.name
-    assert_equal "starred", ast.value
+    assert_operator({name: "is", value: "starred"}, ast)
   end
 
   def test_is_unread
     ast = GmailSearchSyntax.parse!("is:unread")
-    assert_instance_of Operator, ast
-    assert_equal "is", ast.name
-    assert_equal "unread", ast.value
+    assert_operator({name: "is", value: "unread"}, ast)
   end
 
   def test_size_operator
     ast = GmailSearchSyntax.parse!("size:1000000")
-    assert_instance_of Operator, ast
-    assert_equal "size", ast.name
-    assert_equal 1000000, ast.value
+    assert_operator({name: "size", value: 1000000}, ast)
   end
 
   def test_larger_operator
     ast = GmailSearchSyntax.parse!("larger:10M")
-    assert_instance_of Operator, ast
-    assert_equal "larger", ast.name
-    assert_equal "10M", ast.value
+    assert_operator({name: "larger", value: "10M"}, ast)
   end
 
   def test_complex_query_with_multiple_operators
@@ -288,37 +268,27 @@ class GmailSearchSyntaxTest < Minitest::Test
 
   def test_list_operator
     ast = GmailSearchSyntax.parse!("list:info@example.com")
-    assert_instance_of Operator, ast
-    assert_equal "list", ast.name
-    assert_equal "info@example.com", ast.value
+    assert_operator({name: "list", value: "info@example.com"}, ast)
   end
 
   def test_deliveredto_operator
     ast = GmailSearchSyntax.parse!("deliveredto:username@example.com")
-    assert_instance_of Operator, ast
-    assert_equal "deliveredto", ast.name
-    assert_equal "username@example.com", ast.value
+    assert_operator({name: "deliveredto", value: "username@example.com"}, ast)
   end
 
   def test_rfc822msgid_operator
     ast = GmailSearchSyntax.parse!("rfc822msgid:200503292@example.com")
-    assert_instance_of Operator, ast
-    assert_equal "rfc822msgid", ast.name
-    assert_equal "200503292@example.com", ast.value
+    assert_operator({name: "rfc822msgid", value: "200503292@example.com"}, ast)
   end
 
   def test_cc_operator
     ast = GmailSearchSyntax.parse!("cc:john@example.com")
-    assert_instance_of Operator, ast
-    assert_equal "cc", ast.name
-    assert_equal "john@example.com", ast.value
+    assert_operator({name: "cc", value: "john@example.com"}, ast)
   end
 
   def test_bcc_operator
     ast = GmailSearchSyntax.parse!("bcc:david@example.com")
-    assert_instance_of Operator, ast
-    assert_equal "bcc", ast.name
-    assert_equal "david@example.com", ast.value
+    assert_operator({name: "bcc", value: "david@example.com"}, ast)
   end
 
   def test_plain_text_search
@@ -419,9 +389,7 @@ class GmailSearchSyntaxTest < Minitest::Test
 
   def test_email_with_plus_sign
     ast = GmailSearchSyntax.parse!("to:user+tag@example.com")
-    assert_instance_of Operator, ast
-    assert_equal "to", ast.name
-    assert_equal "user+tag@example.com", ast.value
+    assert_operator({name: "to", value: "user+tag@example.com"}, ast)
   end
 
   def test_in_operator_with_location
@@ -436,16 +404,12 @@ class GmailSearchSyntaxTest < Minitest::Test
 
   def test_has_drive_operator
     ast = GmailSearchSyntax.parse!("has:drive")
-    assert_instance_of Operator, ast
-    assert_equal "has", ast.name
-    assert_equal "drive", ast.value
+    assert_operator({name: "has", value: "drive"}, ast)
   end
 
   def test_category_updates
     ast = GmailSearchSyntax.parse!("category:updates")
-    assert_instance_of Operator, ast
-    assert_equal "category", ast.name
-    assert_equal "updates", ast.value
+    assert_operator({name: "category", value: "updates"}, ast)
   end
 
   def test_around_default_distance
@@ -462,17 +426,11 @@ class GmailSearchSyntaxTest < Minitest::Test
 
   def test_subject_with_parentheses_multiple_words
     ast = GmailSearchSyntax.parse!("subject:(project status update)")
-    assert_instance_of Operator, ast
-    assert_equal "subject", ast.name
-
-    assert_instance_of And, ast.value
+    assert_operator({name: "subject", value: And}, ast)
     assert_equal 3, ast.value.operands.length
-    assert_instance_of StringToken, ast.value.operands[0]
-    assert_equal "project", ast.value.operands[0].value
-    assert_instance_of StringToken, ast.value.operands[1]
-    assert_equal "status", ast.value.operands[1].value
-    assert_instance_of StringToken, ast.value.operands[2]
-    assert_equal "update", ast.value.operands[2].value
+    assert_string_token({value: "project"}, ast.value.operands[0])
+    assert_string_token({value: "status"}, ast.value.operands[1])
+    assert_string_token({value: "update"}, ast.value.operands[2])
   end
 
   def test_and_explicit_with_text
@@ -489,43 +447,28 @@ class GmailSearchSyntaxTest < Minitest::Test
 
   def test_smaller_operator
     ast = GmailSearchSyntax.parse!("smaller:1M")
-    assert_instance_of Operator, ast
-    assert_equal "smaller", ast.name
-    assert_equal "1M", ast.value
+    assert_operator({name: "smaller", value: "1M"}, ast)
   end
 
   def test_or_inside_operator_value
     ast = GmailSearchSyntax.parse!("from:(mischa@ OR julik@)")
-    assert_instance_of Operator, ast
-    assert_equal "from", ast.name
-
-    assert_instance_of Or, ast.value
+    assert_operator({name: "from", value: Or}, ast)
     assert_equal 2, ast.value.operands.length
-    assert_instance_of StringToken, ast.value.operands[0]
-    assert_equal "mischa@", ast.value.operands[0].value
-    assert_instance_of StringToken, ast.value.operands[1]
-    assert_equal "julik@", ast.value.operands[1].value
+    assert_string_token({value: "mischa@"}, ast.value.operands[0])
+    assert_string_token({value: "julik@"}, ast.value.operands[1])
   end
 
   def test_or_with_emails_inside_operator
     ast = GmailSearchSyntax.parse!("from:(amy@example.com OR bob@example.com)")
-    assert_instance_of Operator, ast
-    assert_equal "from", ast.name
-
-    assert_instance_of Or, ast.value
+    assert_operator({name: "from", value: Or}, ast)
     assert_equal 2, ast.value.operands.length
-    assert_instance_of StringToken, ast.value.operands[0]
-    assert_equal "amy@example.com", ast.value.operands[0].value
-    assert_instance_of StringToken, ast.value.operands[1]
-    assert_equal "bob@example.com", ast.value.operands[1].value
+    assert_string_token({value: "amy@example.com"}, ast.value.operands[0])
+    assert_string_token({value: "bob@example.com"}, ast.value.operands[1])
   end
 
   def test_multiple_or_inside_operator
     ast = GmailSearchSyntax.parse!("from:(a@ OR b@ OR c@)")
-    assert_instance_of Operator, ast
-    assert_equal "from", ast.name
-
-    assert_instance_of Or, ast.value
+    assert_operator({name: "from", value: Or}, ast)
     assert_equal 3, ast.value.operands.length
     assert_equal "a@", ast.value.operands[0].value
     assert_equal "b@", ast.value.operands[1].value
@@ -534,15 +477,10 @@ class GmailSearchSyntaxTest < Minitest::Test
 
   def test_and_inside_operator_value
     ast = GmailSearchSyntax.parse!("subject:(urgent AND meeting)")
-    assert_instance_of Operator, ast
-    assert_equal "subject", ast.name
-
-    assert_instance_of And, ast.value
+    assert_operator({name: "subject", value: And}, ast)
     assert_equal 2, ast.value.operands.length
-    assert_instance_of StringToken, ast.value.operands[0]
-    assert_equal "urgent", ast.value.operands[0].value
-    assert_instance_of StringToken, ast.value.operands[1]
-    assert_equal "meeting", ast.value.operands[1].value
+    assert_string_token({value: "urgent"}, ast.value.operands[0])
+    assert_string_token({value: "meeting"}, ast.value.operands[1])
   end
 
   def test_operator_with_or_combined_with_other_conditions
@@ -561,13 +499,9 @@ class GmailSearchSyntaxTest < Minitest::Test
 
   def test_negation_inside_operator_value
     ast = GmailSearchSyntax.parse!("subject:(meeting -cancelled)")
-    assert_instance_of Operator, ast
-    assert_equal "subject", ast.name
-
-    assert_instance_of And, ast.value
+    assert_operator({name: "subject", value: And}, ast)
     assert_equal 2, ast.value.operands.length
-    assert_instance_of StringToken, ast.value.operands[0]
-    assert_equal "meeting", ast.value.operands[0].value
+    assert_string_token({value: "meeting"}, ast.value.operands[0])
     assert_instance_of Not, ast.value.operands[1]
     assert_equal "cancelled", ast.value.operands[1].child.value
   end
@@ -606,15 +540,10 @@ class GmailSearchSyntaxTest < Minitest::Test
 
   def test_curly_braces_inside_operator_value
     ast = GmailSearchSyntax.parse!("from:{mischa@ marc@}")
-    assert_instance_of Operator, ast
-    assert_equal "from", ast.name
-
-    assert_instance_of Or, ast.value
+    assert_operator({name: "from", value: Or}, ast)
     assert_equal 2, ast.value.operands.length
-    assert_instance_of StringToken, ast.value.operands[0]
-    assert_equal "mischa@", ast.value.operands[0].value
-    assert_instance_of StringToken, ast.value.operands[1]
-    assert_equal "marc@", ast.value.operands[1].value
+    assert_string_token({value: "mischa@"}, ast.value.operands[0])
+    assert_string_token({value: "marc@"}, ast.value.operands[1])
   end
 
   def test_curly_braces_with_emails_inside_operator
