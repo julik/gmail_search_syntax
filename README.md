@@ -39,11 +39,11 @@ GmailSearchSyntax.parse!("from:amy OR from:bob")
 
 # Negation
 GmailSearchSyntax.parse!("dinner -movie")
-# => #<And #<Text "dinner"> AND #<Not #<Text "movie">>>
+# => #<And #<StringToken "dinner"> AND #<Not #<StringToken "movie">>>
 
 # Proximity search
 GmailSearchSyntax.parse!("holiday AROUND 10 vacation")
-# => #<Around #<Text "holiday"> AROUND 10 #<Text "vacation">>
+# => #<Around #<StringToken "holiday"> AROUND 10 #<StringToken "vacation">>
 
 # Complex query with OR inside operator values
 GmailSearchSyntax.parse!("from:{alice@ bob@} subject:urgent")

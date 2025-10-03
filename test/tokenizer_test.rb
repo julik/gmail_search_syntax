@@ -182,4 +182,58 @@ class TokenizerTest < Minitest::Test
     assert_equal "report", word_tokens[1].value
     assert_equal "meeting", word_tokens[2].value
   end
+
+  def test_tokenize_quoted_string_with_escaped_quote
+    tokens = tokenize('"She said \\"hello\\" to me"')
+    assert_equal 2, tokens.length
+    assert_equal :quoted_string, tokens[0].type
+    assert_equal 'She said "hello" to me', tokens[0].value
+    assert_equal :eof, tokens[1].type
+  end
+
+  def test_tokenize_quoted_string_with_escaped_backslash
+    tokens = tokenize('"path\\\\to\\\\file"')
+    assert_equal 2, tokens.length
+    assert_equal :quoted_string, tokens[0].type
+    assert_equal 'path\\to\\file', tokens[0].value
+  end
+
+  def test_tokenize_quoted_string_with_multiple_escapes
+    tokens = tokenize('"test \\"nested\\" and \\\\ slash"')
+    assert_equal 2, tokens.length
+    assert_equal :quoted_string, tokens[0].type
+    assert_equal 'test "nested" and \\ slash', tokens[0].value
+  end
+
+  def test_tokenize_word_with_escaped_quote
+    tokens = tokenize('meeting\\"room')
+    assert_equal 2, tokens.length
+    assert_equal :word, tokens[0].type
+    assert_equal 'meeting"room', tokens[0].value
+  end
+
+  def test_tokenize_word_with_escaped_backslash
+    tokens = tokenize('path\\\\to')
+    assert_equal 2, tokens.length
+    assert_equal :word, tokens[0].type
+    assert_equal 'path\\to', tokens[0].value
+  end
+
+  def test_tokenize_multiple_words_with_escapes
+    tokens = tokenize('meeting\\"room another\\\\word')
+    word_tokens = tokens.select { |t| t.type == :word }
+    assert_equal 2, word_tokens.length
+    assert_equal 'meeting"room', word_tokens[0].value
+    assert_equal 'another\\word', word_tokens[1].value
+  end
+
+  def test_tokenize_operator_value_with_escaped_quote
+    tokens = tokenize('subject:test\\"value')
+    assert_equal 4, tokens.length
+    assert_equal :word, tokens[0].type
+    assert_equal "subject", tokens[0].value
+    assert_equal :colon, tokens[1].type
+    assert_equal :word, tokens[2].type
+    assert_equal 'test"value', tokens[2].value
+  end
 end

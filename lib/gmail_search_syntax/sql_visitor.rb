@@ -46,8 +46,10 @@ module GmailSearchSyntax
       case node
       when AST::Operator
         visit_operator(node)
-      when AST::Text
-        visit_text(node)
+      when AST::StringToken
+        visit_string_token(node)
+      when AST::Substring
+        visit_substring(node)
       when AST::And
         visit_and(node)
       when AST::Or
@@ -325,11 +327,26 @@ module GmailSearchSyntax
       @query.add_condition("m0.rfc822_message_id = ?")
     end
 
-    def visit_text(node)
-      @query.add_param(node.value)
+    def visit_string_token(node)
+      # Word boundary matching - the value should appear as a complete word/token
+      # We use LIKE with word boundaries: spaces, start/end of string
+      value = node.value
+      @query.add_param(value)
+      @query.add_param("#{value} %")
+      @query.add_param("% #{value}")
+      @query.add_param("% #{value} %")
+      @query.add_condition("((m0.subject = ? OR m0.subject LIKE ? OR m0.subject LIKE ? OR m0.subject LIKE ?) OR (m0.body = ? OR m0.body LIKE ? OR m0.body LIKE ? OR m0.body LIKE ?))")
+      @query.add_param(value)
+      @query.add_param("#{value} %")
+      @query.add_param("% #{value}")
+      @query.add_param("% #{value} %")
+    end
+
+    def visit_substring(node)
+      # Substring matching - the value can appear anywhere in the text
+      @query.add_param("%#{node.value}%")
+      @query.add_param("%#{node.value}%")
       @query.add_condition("(m0.subject LIKE ? OR m0.body LIKE ?)")
-      @query.add_param("%#{node.value}%")
-      @query.add_param("%#{node.value}%")
     end
 
     def visit_and(node)

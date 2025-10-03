@@ -129,11 +129,11 @@ class GmailSearchSyntaxTest < Minitest::Test
     assert_instance_of And, ast
 
     assert_equal 2, ast.operands.length
-    assert_instance_of Text, ast.operands[0]
+    assert_instance_of StringToken, ast.operands[0]
     assert_equal "dinner", ast.operands[0].value
 
     assert_instance_of Not, ast.operands[1]
-    assert_instance_of Text, ast.operands[1].child
+    assert_instance_of StringToken, ast.operands[1].child
     assert_equal "movie", ast.operands[1].child.value
   end
 
@@ -141,17 +141,17 @@ class GmailSearchSyntaxTest < Minitest::Test
     ast = GmailSearchSyntax.parse!("holiday AROUND 10 vacation")
     assert_instance_of Around, ast
 
-    assert_instance_of Text, ast.left
+    assert_instance_of StringToken, ast.left
     assert_equal "holiday", ast.left.value
     assert_equal 10, ast.distance
 
-    assert_instance_of Text, ast.right
+    assert_instance_of StringToken, ast.right
     assert_equal "vacation", ast.right.value
   end
 
   def test_around_with_quoted_string
     ast = GmailSearchSyntax.parse!('"secret AROUND 25 birthday"')
-    assert_instance_of Text, ast
+    assert_instance_of Substring, ast
     assert_equal "secret AROUND 25 birthday", ast.value
   end
 
@@ -192,7 +192,7 @@ class GmailSearchSyntaxTest < Minitest::Test
 
   def test_quoted_exact_phrase
     ast = GmailSearchSyntax.parse!('"dinner and movie tonight"')
-    assert_instance_of Text, ast
+    assert_instance_of Substring, ast
     assert_equal "dinner and movie tonight", ast.value
   end
 
@@ -203,9 +203,9 @@ class GmailSearchSyntaxTest < Minitest::Test
 
     assert_instance_of And, ast.value
     assert_equal 2, ast.value.operands.length
-    assert_instance_of Text, ast.value.operands[0]
+    assert_instance_of StringToken, ast.value.operands[0]
     assert_equal "dinner", ast.value.operands[0].value
-    assert_instance_of Text, ast.value.operands[1]
+    assert_instance_of StringToken, ast.value.operands[1]
     assert_equal "movie", ast.value.operands[1].value
   end
 
@@ -218,7 +218,7 @@ class GmailSearchSyntaxTest < Minitest::Test
     assert_equal "in", ast.operands[0].name
     assert_equal "anywhere", ast.operands[0].value
 
-    assert_instance_of Text, ast.operands[1]
+    assert_instance_of StringToken, ast.operands[1]
     assert_equal "movie", ast.operands[1].value
   end
 
@@ -327,7 +327,7 @@ class GmailSearchSyntaxTest < Minitest::Test
 
   def test_plain_text_search
     ast = GmailSearchSyntax.parse!("meeting")
-    assert_instance_of Text, ast
+    assert_instance_of StringToken, ast
     assert_equal "meeting", ast.value
   end
 
@@ -336,10 +336,10 @@ class GmailSearchSyntaxTest < Minitest::Test
     assert_instance_of And, ast
 
     assert_equal 2, ast.operands.length
-    assert_instance_of Text, ast.operands[0]
+    assert_instance_of StringToken, ast.operands[0]
     assert_equal "project", ast.operands[0].value
 
-    assert_instance_of Text, ast.operands[1]
+    assert_instance_of StringToken, ast.operands[1]
     assert_equal "report", ast.operands[1].value
   end
 
@@ -417,7 +417,7 @@ class GmailSearchSyntaxTest < Minitest::Test
 
   def test_quoted_string_with_operators_inside
     ast = GmailSearchSyntax.parse!('"from:amy to:bob"')
-    assert_instance_of Text, ast
+    assert_instance_of Substring, ast
     assert_equal "from:amy to:bob", ast.value
   end
 
@@ -460,7 +460,7 @@ class GmailSearchSyntaxTest < Minitest::Test
 
   def test_parentheses_with_single_term
     ast = GmailSearchSyntax.parse!("(meeting)")
-    assert_instance_of Text, ast
+    assert_instance_of StringToken, ast
     assert_equal "meeting", ast.value
   end
 
@@ -471,11 +471,11 @@ class GmailSearchSyntaxTest < Minitest::Test
 
     assert_instance_of And, ast.value
     assert_equal 3, ast.value.operands.length
-    assert_instance_of Text, ast.value.operands[0]
+    assert_instance_of StringToken, ast.value.operands[0]
     assert_equal "project", ast.value.operands[0].value
-    assert_instance_of Text, ast.value.operands[1]
+    assert_instance_of StringToken, ast.value.operands[1]
     assert_equal "status", ast.value.operands[1].value
-    assert_instance_of Text, ast.value.operands[2]
+    assert_instance_of StringToken, ast.value.operands[2]
     assert_equal "update", ast.value.operands[2].value
   end
 
@@ -484,10 +484,10 @@ class GmailSearchSyntaxTest < Minitest::Test
     assert_instance_of And, ast
 
     assert_equal 2, ast.operands.length
-    assert_instance_of Text, ast.operands[0]
+    assert_instance_of StringToken, ast.operands[0]
     assert_equal "meeting", ast.operands[0].value
 
-    assert_instance_of Text, ast.operands[1]
+    assert_instance_of StringToken, ast.operands[1]
     assert_equal "project", ast.operands[1].value
   end
 
@@ -505,9 +505,9 @@ class GmailSearchSyntaxTest < Minitest::Test
 
     assert_instance_of Or, ast.value
     assert_equal 2, ast.value.operands.length
-    assert_instance_of Text, ast.value.operands[0]
+    assert_instance_of StringToken, ast.value.operands[0]
     assert_equal "mischa@", ast.value.operands[0].value
-    assert_instance_of Text, ast.value.operands[1]
+    assert_instance_of StringToken, ast.value.operands[1]
     assert_equal "julik@", ast.value.operands[1].value
   end
 
@@ -518,9 +518,9 @@ class GmailSearchSyntaxTest < Minitest::Test
 
     assert_instance_of Or, ast.value
     assert_equal 2, ast.value.operands.length
-    assert_instance_of Text, ast.value.operands[0]
+    assert_instance_of StringToken, ast.value.operands[0]
     assert_equal "amy@example.com", ast.value.operands[0].value
-    assert_instance_of Text, ast.value.operands[1]
+    assert_instance_of StringToken, ast.value.operands[1]
     assert_equal "bob@example.com", ast.value.operands[1].value
   end
 
@@ -543,9 +543,9 @@ class GmailSearchSyntaxTest < Minitest::Test
 
     assert_instance_of And, ast.value
     assert_equal 2, ast.value.operands.length
-    assert_instance_of Text, ast.value.operands[0]
+    assert_instance_of StringToken, ast.value.operands[0]
     assert_equal "urgent", ast.value.operands[0].value
-    assert_instance_of Text, ast.value.operands[1]
+    assert_instance_of StringToken, ast.value.operands[1]
     assert_equal "meeting", ast.value.operands[1].value
   end
 
@@ -570,7 +570,7 @@ class GmailSearchSyntaxTest < Minitest::Test
 
     assert_instance_of And, ast.value
     assert_equal 2, ast.value.operands.length
-    assert_instance_of Text, ast.value.operands[0]
+    assert_instance_of StringToken, ast.value.operands[0]
     assert_equal "meeting", ast.value.operands[0].value
     assert_instance_of Not, ast.value.operands[1]
     assert_equal "cancelled", ast.value.operands[1].child.value
@@ -604,7 +604,7 @@ class GmailSearchSyntaxTest < Minitest::Test
     assert_equal 2, ast.value.operands[0].operands.length
     assert_equal "urgent", ast.value.operands[0].operands[0].value
     assert_equal "important", ast.value.operands[0].operands[1].value
-    assert_instance_of Text, ast.value.operands[1]
+    assert_instance_of StringToken, ast.value.operands[1]
     assert_equal "meeting", ast.value.operands[1].value
   end
 
@@ -615,9 +615,9 @@ class GmailSearchSyntaxTest < Minitest::Test
 
     assert_instance_of Or, ast.value
     assert_equal 2, ast.value.operands.length
-    assert_instance_of Text, ast.value.operands[0]
+    assert_instance_of StringToken, ast.value.operands[0]
     assert_equal "mischa@", ast.value.operands[0].value
-    assert_instance_of Text, ast.value.operands[1]
+    assert_instance_of StringToken, ast.value.operands[1]
     assert_equal "marc@", ast.value.operands[1].value
   end
 
@@ -687,5 +687,51 @@ class GmailSearchSyntaxTest < Minitest::Test
     assert_instance_of Operator, ast.operands[1]
     assert_equal "subject", ast.operands[1].name
     assert_instance_of And, ast.operands[1].value
+  end
+
+  def test_quoted_string_with_escaped_quotes
+    ast = GmailSearchSyntax.parse!('"She said \\"hello\\" to me"')
+    assert_instance_of Substring, ast
+    assert_equal 'She said "hello" to me', ast.value
+  end
+
+  def test_quoted_string_with_escaped_backslash
+    ast = GmailSearchSyntax.parse!('"path\\\\to\\\\file"')
+    assert_instance_of Substring, ast
+    assert_equal 'path\\to\\file', ast.value
+  end
+
+  def test_subject_with_escaped_quotes
+    ast = GmailSearchSyntax.parse!('subject:"Meeting: \\"Q1 Review\\""')
+    assert_instance_of Operator, ast
+    assert_equal "subject", ast.name
+    assert_equal 'Meeting: "Q1 Review"', ast.value
+  end
+
+  def test_unquoted_text_with_escaped_quote
+    ast = GmailSearchSyntax.parse!('meeting\\"room')
+    assert_instance_of StringToken, ast
+    assert_equal 'meeting"room', ast.value
+  end
+
+  def test_unquoted_text_with_escaped_backslash
+    ast = GmailSearchSyntax.parse!('path\\\\to\\\\file')
+    assert_instance_of StringToken, ast
+    assert_equal 'path\\to\\file', ast.value
+  end
+
+  def test_operator_with_unquoted_escaped_quote
+    ast = GmailSearchSyntax.parse!('subject:test\\"value')
+    assert_instance_of Operator, ast
+    assert_equal "subject", ast.name
+    assert_equal 'test"value', ast.value
+  end
+
+  def test_multiple_tokens_with_escapes
+    ast = GmailSearchSyntax.parse!('meeting\\"room project\\\\plan')
+    assert_instance_of And, ast
+    assert_equal 2, ast.operands.length
+    assert_equal 'meeting"room', ast.operands[0].value
+    assert_equal 'project\\plan', ast.operands[1].value
   end
 end

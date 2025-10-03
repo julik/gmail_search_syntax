@@ -103,20 +103,37 @@ module GmailSearchSyntax
     end
 
     def read_quoted_string
-      advance
+      advance # Skip opening quote
 
       value = ""
-      while @position < @input.length && current_char != '"'
-        if current_char == "\\"
+      while @position < @input.length
+        char = current_char
+
+        if char == "\\"
+          # Handle escape sequences
           advance
-          value += current_char if @position < @input.length
+          if @position < @input.length
+            next_char = current_char
+            value += case next_char
+            when '"', "\\"
+              # Escaped quote or backslash - add the literal character
+              next_char
+            else
+              # Other escapes - keep the backslash and the character
+              "\\" + next_char
+            end
+            advance
+          end
+        elsif char == '"'
+          # Unescaped quote - end of string
+          break
         else
-          value += current_char
+          value += char
+          advance
         end
-        advance
       end
 
-      advance if @position < @input.length
+      advance if @position < @input.length && current_char == '"' # Skip closing quote
 
       add_token(:quoted_string, value)
     end
@@ -128,8 +145,26 @@ module GmailSearchSyntax
         char = current_char
         break if /[\s():{}]/.match?(char)
         break if char == "-"
-        value += char
-        advance
+
+        if char == "\\"
+          # Handle escape sequences in unquoted tokens
+          advance
+          if @position < @input.length
+            next_char = current_char
+            value += case next_char
+            when '"', "\\"
+              # Escaped quote or backslash - add the literal character
+              next_char
+            else
+              # Other escapes - keep the backslash and the character
+              "\\" + next_char
+            end
+            advance
+          end
+        else
+          value += char
+          advance
+        end
       end
 
       return if value.empty?

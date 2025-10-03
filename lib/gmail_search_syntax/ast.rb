@@ -23,7 +23,7 @@ module GmailSearchSyntax
       end
     end
 
-    class Text < Node
+    class StringToken < Node
       attr_reader :value
 
       def initialize(value)
@@ -31,7 +31,19 @@ module GmailSearchSyntax
       end
 
       def inspect
-        "#<Text #{@value.inspect}>"
+        "#<StringToken #{@value.inspect}>"
+      end
+    end
+
+    class Substring < Node
+      attr_reader :value
+
+      def initialize(value)
+        @value = value
+      end
+
+      def inspect
+        "#<Substring #{@value.inspect}>"
       end
     end
 

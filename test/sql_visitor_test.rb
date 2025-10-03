@@ -244,9 +244,21 @@ class SqlVisitorTest < Minitest::Test
   def test_plain_text_search
     sql, params = parse_and_visit("meeting")
 
+    # Text nodes now use word boundary matching
+    assert_includes sql, "m0.subject = ?"
+    assert_includes sql, "m0.subject LIKE ?"
+    assert_includes sql, "m0.body = ?"
+    assert_includes sql, "m0.body LIKE ?"
+    assert_equal ["meeting", "meeting %", "% meeting", "% meeting %", "meeting", "meeting %", "% meeting", "% meeting %"], params
+  end
+
+  def test_quoted_text_search_uses_substring
+    sql, params = parse_and_visit('"meeting"')
+
+    # Quoted strings create Substring nodes which use LIKE %value%
     assert_includes sql, "m0.subject LIKE ?"
     assert_includes sql, "m0.body LIKE ?"
-    assert_equal ["meeting", "%meeting%", "%meeting%"], params
+    assert_equal ["%meeting%", "%meeting%"], params
   end
 
   def test_complex_query
@@ -342,5 +354,36 @@ class SqlVisitorTest < Minitest::Test
 
     join_count = sql.scan("INNER JOIN message_addresses").length
     assert_equal 2, join_count
+  end
+
+  def test_quoted_string_with_escaped_quotes
+    sql, params = parse_and_visit('"She said \\"hello\\" to me"')
+
+    assert_includes sql, "m0.subject LIKE ?"
+    assert_includes sql, "m0.body LIKE ?"
+    assert_equal ['%She said "hello" to me%', '%She said "hello" to me%'], params
+  end
+
+  def test_subject_with_escaped_quotes
+    sql, params = parse_and_visit('subject:"Meeting: \\"Q1 Review\\""')
+
+    assert_includes sql, "m0.subject LIKE ?"
+    assert_equal ['%Meeting: "Q1 Review"%'], params
+  end
+
+  def test_unquoted_token_with_escaped_quote
+    sql, params = parse_and_visit('meeting\\"room')
+
+    # Unquoted tokens use word boundary matching
+    assert_includes sql, "m0.subject = ?"
+    assert_includes sql, "m0.body = ?"
+    assert_equal ['meeting"room', 'meeting"room %', '% meeting"room', '% meeting"room %', 'meeting"room', 'meeting"room %', '% meeting"room', '% meeting"room %'], params
+  end
+
+  def test_operator_with_unquoted_escaped_quote
+    sql, params = parse_and_visit('subject:test\\"value')
+
+    assert_includes sql, "m0.subject LIKE ?"
+    assert_equal ['%test"value%'], params
   end
 end
