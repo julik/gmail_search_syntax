@@ -43,7 +43,7 @@ module GmailSearchSyntax
       end
 
       def inspect
-        "#<And #{@operands.map(&:inspect).join(' AND ')}>"
+        "#<And #{@operands.map(&:inspect).join(" AND ")}>"
       end
     end
 
@@ -55,7 +55,7 @@ module GmailSearchSyntax
       end
 
       def inspect
-        "#<Or #{@operands.map(&:inspect).join(' OR ')}>"
+        "#<Or #{@operands.map(&:inspect).join(" OR ")}>"
       end
     end
 
@@ -98,4 +98,3 @@ module GmailSearchSyntax
     end
   end
 end
-

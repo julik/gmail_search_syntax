@@ -25,7 +25,7 @@ class TokenizerTest < Minitest::Test
 
   def test_tokenize_operators
     tokens = tokenize("from:amy@example.com OR to:bob@example.com")
-    
+
     assert_equal 8, tokens.length
     assert_equal :word, tokens[0].type
     assert_equal "from", tokens[0].value
@@ -43,7 +43,7 @@ class TokenizerTest < Minitest::Test
 
   def test_tokenize_parentheses
     tokens = tokenize("subject:(meeting call)")
-    
+
     assert_equal 7, tokens.length
     assert_equal :word, tokens[0].type
     assert_equal "subject", tokens[0].value
@@ -59,7 +59,7 @@ class TokenizerTest < Minitest::Test
 
   def test_tokenize_braces
     tokens = tokenize("{from:a from:b}")
-    
+
     assert_equal 9, tokens.length
     assert_equal :lbrace, tokens[0].type
     assert_equal :word, tokens[1].type
@@ -88,7 +88,7 @@ class TokenizerTest < Minitest::Test
 
   def test_tokenize_around
     tokens = tokenize("holiday AROUND 10 vacation")
-    
+
     assert_equal 5, tokens.length
     assert_equal :word, tokens[0].type
     assert_equal "holiday", tokens[0].value
@@ -132,7 +132,7 @@ class TokenizerTest < Minitest::Test
 
   def test_tokenize_and_operator
     tokens = tokenize("from:amy@example.com AND to:bob@example.com")
-    
+
     and_token = tokens.find { |t| t.type == :and }
     refute_nil and_token
     assert_equal "AND", and_token.value
@@ -148,7 +148,7 @@ class TokenizerTest < Minitest::Test
 
   def test_tokenize_complex_query
     tokens = tokenize('from:boss@example.com subject:"urgent meeting" has:attachment')
-    
+
     assert_equal 10, tokens.length
     assert_equal :word, tokens[0].type
     assert_equal "from", tokens[0].value
@@ -183,4 +183,3 @@ class TokenizerTest < Minitest::Test
     assert_equal "meeting", word_tokens[2].value
   end
 end
-

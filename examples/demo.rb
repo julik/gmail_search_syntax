@@ -1,4 +1,4 @@
-require_relative '../lib/gmail_search_syntax'
+require_relative "../lib/gmail_search_syntax"
 
 puts "Gmail Search Syntax Parser - Demo"
 puts "=" * 50
@@ -26,4 +26,3 @@ queries.each do |query|
   puts "AST:   #{ast.inspect}"
   puts
 end
-

@@ -73,12 +73,12 @@ class GmailSearchSyntaxTest < Minitest::Test
   def test_or_operator_with_from
     ast = GmailSearchSyntax.parse!("from:amy OR from:david")
     assert_instance_of Or, ast
-    
+
     assert_equal 2, ast.operands.length
     assert_instance_of Operator, ast.operands[0]
     assert_equal "from", ast.operands[0].name
     assert_equal "amy", ast.operands[0].value
-    
+
     assert_instance_of Operator, ast.operands[1]
     assert_equal "from", ast.operands[1].name
     assert_equal "david", ast.operands[1].value
@@ -87,12 +87,12 @@ class GmailSearchSyntaxTest < Minitest::Test
   def test_braces_as_or
     ast = GmailSearchSyntax.parse!("{from:amy from:david}")
     assert_instance_of Or, ast
-    
+
     assert_equal 2, ast.operands.length
     assert_instance_of Operator, ast.operands[0]
     assert_equal "from", ast.operands[0].name
     assert_equal "amy", ast.operands[0].value
-    
+
     assert_instance_of Operator, ast.operands[1]
     assert_equal "from", ast.operands[1].name
     assert_equal "david", ast.operands[1].value
@@ -101,12 +101,12 @@ class GmailSearchSyntaxTest < Minitest::Test
   def test_and_operator
     ast = GmailSearchSyntax.parse!("from:amy AND to:david")
     assert_instance_of And, ast
-    
+
     assert_equal 2, ast.operands.length
     assert_instance_of Operator, ast.operands[0]
     assert_equal "from", ast.operands[0].name
     assert_equal "amy", ast.operands[0].value
-    
+
     assert_instance_of Operator, ast.operands[1]
     assert_equal "to", ast.operands[1].name
     assert_equal "david", ast.operands[1].value
@@ -115,11 +115,11 @@ class GmailSearchSyntaxTest < Minitest::Test
   def test_implicit_and
     ast = GmailSearchSyntax.parse!("from:amy to:david")
     assert_instance_of And, ast
-    
+
     assert_equal 2, ast.operands.length
     assert_instance_of Operator, ast.operands[0]
     assert_equal "from", ast.operands[0].name
-    
+
     assert_instance_of Operator, ast.operands[1]
     assert_equal "to", ast.operands[1].name
   end
@@ -127,11 +127,11 @@ class GmailSearchSyntaxTest < Minitest::Test
   def test_negation_with_minus
     ast = GmailSearchSyntax.parse!("dinner -movie")
     assert_instance_of And, ast
-    
+
     assert_equal 2, ast.operands.length
     assert_instance_of Text, ast.operands[0]
     assert_equal "dinner", ast.operands[0].value
-    
+
     assert_instance_of Not, ast.operands[1]
     assert_instance_of Text, ast.operands[1].child
     assert_equal "movie", ast.operands[1].child.value
@@ -140,11 +140,11 @@ class GmailSearchSyntaxTest < Minitest::Test
   def test_around_operator
     ast = GmailSearchSyntax.parse!("holiday AROUND 10 vacation")
     assert_instance_of Around, ast
-    
+
     assert_instance_of Text, ast.left
     assert_equal "holiday", ast.left.value
     assert_equal 10, ast.distance
-    
+
     assert_instance_of Text, ast.right
     assert_equal "vacation", ast.right.value
   end
@@ -200,7 +200,7 @@ class GmailSearchSyntaxTest < Minitest::Test
     ast = GmailSearchSyntax.parse!("subject:(dinner movie)")
     assert_instance_of Operator, ast
     assert_equal "subject", ast.name
-    
+
     assert_instance_of And, ast.value
     assert_equal 2, ast.value.operands.length
     assert_instance_of Text, ast.value.operands[0]
@@ -212,12 +212,12 @@ class GmailSearchSyntaxTest < Minitest::Test
   def test_in_anywhere
     ast = GmailSearchSyntax.parse!("in:anywhere movie")
     assert_instance_of And, ast
-    
+
     assert_equal 2, ast.operands.length
     assert_instance_of Operator, ast.operands[0]
     assert_equal "in", ast.operands[0].name
     assert_equal "anywhere", ast.operands[0].value
-    
+
     assert_instance_of Text, ast.operands[1]
     assert_equal "movie", ast.operands[1].value
   end
@@ -253,14 +253,14 @@ class GmailSearchSyntaxTest < Minitest::Test
   def test_complex_query_with_multiple_operators
     ast = GmailSearchSyntax.parse!("from:amy subject:meeting has:attachment")
     assert_instance_of And, ast
-    
+
     assert_equal 3, ast.operands.length
     assert_instance_of Operator, ast.operands[0]
     assert_equal "from", ast.operands[0].name
-    
+
     assert_instance_of Operator, ast.operands[1]
     assert_equal "subject", ast.operands[1].name
-    
+
     assert_instance_of Operator, ast.operands[2]
     assert_equal "has", ast.operands[2].name
   end
@@ -268,16 +268,16 @@ class GmailSearchSyntaxTest < Minitest::Test
   def test_complex_or_and_combination
     ast = GmailSearchSyntax.parse!("from:amy OR from:bob to:me")
     assert_instance_of Or, ast
-    
+
     assert_equal 2, ast.operands.length
     assert_instance_of Operator, ast.operands[0]
-    
+
     assert_instance_of And, ast.operands[1]
     assert_equal 2, ast.operands[1].operands.length
     assert_instance_of Operator, ast.operands[1].operands[0]
     assert_equal "from", ast.operands[1].operands[0].name
     assert_equal "bob", ast.operands[1].operands[0].value
-    
+
     assert_instance_of Operator, ast.operands[1].operands[1]
     assert_equal "to", ast.operands[1].operands[1].name
   end
@@ -334,11 +334,11 @@ class GmailSearchSyntaxTest < Minitest::Test
   def test_multiple_plain_text_words
     ast = GmailSearchSyntax.parse!("project report")
     assert_instance_of And, ast
-    
+
     assert_equal 2, ast.operands.length
     assert_instance_of Text, ast.operands[0]
     assert_equal "project", ast.operands[0].value
-    
+
     assert_instance_of Text, ast.operands[1]
     assert_equal "report", ast.operands[1].value
   end
@@ -360,23 +360,23 @@ class GmailSearchSyntaxTest < Minitest::Test
   def test_nested_parentheses_with_operators
     ast = GmailSearchSyntax.parse!("from:amy (subject:meeting OR subject:call)")
     assert_instance_of And, ast
-    
+
     assert_equal 2, ast.operands.length
     assert_instance_of Operator, ast.operands[0]
     assert_equal "from", ast.operands[0].name
-    
+
     assert_instance_of Or, ast.operands[1]
   end
 
   def test_multiple_negations
     ast = GmailSearchSyntax.parse!("-from:spam -subject:junk")
     assert_instance_of And, ast
-    
+
     assert_equal 2, ast.operands.length
     assert_instance_of Not, ast.operands[0]
     assert_instance_of Operator, ast.operands[0].child
     assert_equal "from", ast.operands[0].child.name
-    
+
     assert_instance_of Not, ast.operands[1]
     assert_instance_of Operator, ast.operands[1].child
     assert_equal "subject", ast.operands[1].child.name
@@ -385,7 +385,7 @@ class GmailSearchSyntaxTest < Minitest::Test
   def test_or_with_three_terms
     ast = GmailSearchSyntax.parse!("{from:a from:b from:c}")
     assert_instance_of Or, ast
-    
+
     assert_equal 3, ast.operands.length
     assert_instance_of Operator, ast.operands[0]
     assert_equal "a", ast.operands[0].value
@@ -398,18 +398,18 @@ class GmailSearchSyntaxTest < Minitest::Test
   def test_complex_mixed_query
     ast = GmailSearchSyntax.parse!("from:boss subject:urgent has:attachment -label:archive")
     assert_instance_of And, ast
-    
+
     assert_equal 4, ast.operands.length
-    
+
     assert_instance_of Operator, ast.operands[0]
     assert_equal "from", ast.operands[0].name
-    
+
     assert_instance_of Operator, ast.operands[1]
     assert_equal "subject", ast.operands[1].name
-    
+
     assert_instance_of Operator, ast.operands[2]
     assert_equal "has", ast.operands[2].name
-    
+
     assert_instance_of Not, ast.operands[3]
     assert_instance_of Operator, ast.operands[3].child
     assert_equal "label", ast.operands[3].child.name
@@ -431,7 +431,7 @@ class GmailSearchSyntaxTest < Minitest::Test
   def test_in_operator_with_location
     ast = GmailSearchSyntax.parse!("in:inbox from:manager")
     assert_instance_of And, ast
-    
+
     assert_equal 2, ast.operands.length
     assert_instance_of Operator, ast.operands[0]
     assert_equal "in", ast.operands[0].name
@@ -468,7 +468,7 @@ class GmailSearchSyntaxTest < Minitest::Test
     ast = GmailSearchSyntax.parse!("subject:(project status update)")
     assert_instance_of Operator, ast
     assert_equal "subject", ast.name
-    
+
     assert_instance_of And, ast.value
     assert_equal 3, ast.value.operands.length
     assert_instance_of Text, ast.value.operands[0]
@@ -482,11 +482,11 @@ class GmailSearchSyntaxTest < Minitest::Test
   def test_and_explicit_with_text
     ast = GmailSearchSyntax.parse!("meeting AND project")
     assert_instance_of And, ast
-    
+
     assert_equal 2, ast.operands.length
     assert_instance_of Text, ast.operands[0]
     assert_equal "meeting", ast.operands[0].value
-    
+
     assert_instance_of Text, ast.operands[1]
     assert_equal "project", ast.operands[1].value
   end
@@ -502,7 +502,7 @@ class GmailSearchSyntaxTest < Minitest::Test
     ast = GmailSearchSyntax.parse!("from:(mischa@ OR julik@)")
     assert_instance_of Operator, ast
     assert_equal "from", ast.name
-    
+
     assert_instance_of Or, ast.value
     assert_equal 2, ast.value.operands.length
     assert_instance_of Text, ast.value.operands[0]
@@ -515,7 +515,7 @@ class GmailSearchSyntaxTest < Minitest::Test
     ast = GmailSearchSyntax.parse!("from:(amy@example.com OR bob@example.com)")
     assert_instance_of Operator, ast
     assert_equal "from", ast.name
-    
+
     assert_instance_of Or, ast.value
     assert_equal 2, ast.value.operands.length
     assert_instance_of Text, ast.value.operands[0]
@@ -528,7 +528,7 @@ class GmailSearchSyntaxTest < Minitest::Test
     ast = GmailSearchSyntax.parse!("from:(a@ OR b@ OR c@)")
     assert_instance_of Operator, ast
     assert_equal "from", ast.name
-    
+
     assert_instance_of Or, ast.value
     assert_equal 3, ast.value.operands.length
     assert_equal "a@", ast.value.operands[0].value
@@ -540,7 +540,7 @@ class GmailSearchSyntaxTest < Minitest::Test
     ast = GmailSearchSyntax.parse!("subject:(urgent AND meeting)")
     assert_instance_of Operator, ast
     assert_equal "subject", ast.name
-    
+
     assert_instance_of And, ast.value
     assert_equal 2, ast.value.operands.length
     assert_instance_of Text, ast.value.operands[0]
@@ -552,12 +552,12 @@ class GmailSearchSyntaxTest < Minitest::Test
   def test_operator_with_or_combined_with_other_conditions
     ast = GmailSearchSyntax.parse!("from:(alice@ OR bob@) subject:meeting")
     assert_instance_of And, ast
-    
+
     assert_equal 2, ast.operands.length
     assert_instance_of Operator, ast.operands[0]
     assert_equal "from", ast.operands[0].name
     assert_instance_of Or, ast.operands[0].value
-    
+
     assert_instance_of Operator, ast.operands[1]
     assert_equal "subject", ast.operands[1].name
     assert_equal "meeting", ast.operands[1].value
@@ -567,7 +567,7 @@ class GmailSearchSyntaxTest < Minitest::Test
     ast = GmailSearchSyntax.parse!("subject:(meeting -cancelled)")
     assert_instance_of Operator, ast
     assert_equal "subject", ast.name
-    
+
     assert_instance_of And, ast.value
     assert_equal 2, ast.value.operands.length
     assert_instance_of Text, ast.value.operands[0]
@@ -579,14 +579,14 @@ class GmailSearchSyntaxTest < Minitest::Test
   def test_complex_expression_inside_operator
     ast = GmailSearchSyntax.parse!("from:(alice@ OR bob@) to:(charlie@ OR david@)")
     assert_instance_of And, ast
-    
+
     assert_equal 2, ast.operands.length
-    
+
     assert_instance_of Operator, ast.operands[0]
     assert_equal "from", ast.operands[0].name
     assert_instance_of Or, ast.operands[0].value
     assert_equal 2, ast.operands[0].value.operands.length
-    
+
     assert_instance_of Operator, ast.operands[1]
     assert_equal "to", ast.operands[1].name
     assert_instance_of Or, ast.operands[1].value
@@ -597,7 +597,7 @@ class GmailSearchSyntaxTest < Minitest::Test
     ast = GmailSearchSyntax.parse!("subject:((urgent OR important) meeting)")
     assert_instance_of Operator, ast
     assert_equal "subject", ast.name
-    
+
     assert_instance_of And, ast.value
     assert_equal 2, ast.value.operands.length
     assert_instance_of Or, ast.value.operands[0]
@@ -612,7 +612,7 @@ class GmailSearchSyntaxTest < Minitest::Test
     ast = GmailSearchSyntax.parse!("from:{mischa@ marc@}")
     assert_instance_of Operator, ast
     assert_equal "from", ast.name
-    
+
     assert_instance_of Or, ast.value
     assert_equal 2, ast.value.operands.length
     assert_instance_of Text, ast.value.operands[0]
@@ -625,7 +625,7 @@ class GmailSearchSyntaxTest < Minitest::Test
     ast = GmailSearchSyntax.parse!("from:{amy@example.com bob@example.com}")
     assert_instance_of Operator, ast
     assert_equal "from", ast.name
-    
+
     assert_instance_of Or, ast.value
     assert_equal 2, ast.value.operands.length
     assert_equal "amy@example.com", ast.value.operands[0].value
@@ -636,7 +636,7 @@ class GmailSearchSyntaxTest < Minitest::Test
     ast = GmailSearchSyntax.parse!("from:{a@ b@ c@ d@}")
     assert_instance_of Operator, ast
     assert_equal "from", ast.name
-    
+
     assert_instance_of Or, ast.value
     assert_equal 4, ast.value.operands.length
     assert_equal "a@", ast.value.operands[0].value
@@ -648,13 +648,13 @@ class GmailSearchSyntaxTest < Minitest::Test
   def test_curly_braces_combined_with_other_conditions
     ast = GmailSearchSyntax.parse!("from:{alice@ bob@} subject:meeting")
     assert_instance_of And, ast
-    
+
     assert_equal 2, ast.operands.length
     assert_instance_of Operator, ast.operands[0]
     assert_equal "from", ast.operands[0].name
     assert_instance_of Or, ast.operands[0].value
     assert_equal 2, ast.operands[0].value.operands.length
-    
+
     assert_instance_of Operator, ast.operands[1]
     assert_equal "subject", ast.operands[1].name
     assert_equal "meeting", ast.operands[1].value
@@ -663,13 +663,13 @@ class GmailSearchSyntaxTest < Minitest::Test
   def test_multiple_operators_with_curly_braces
     ast = GmailSearchSyntax.parse!("from:{alice@ bob@} to:{charlie@ david@}")
     assert_instance_of And, ast
-    
+
     assert_equal 2, ast.operands.length
-    
+
     assert_instance_of Operator, ast.operands[0]
     assert_equal "from", ast.operands[0].name
     assert_instance_of Or, ast.operands[0].value
-    
+
     assert_instance_of Operator, ast.operands[1]
     assert_equal "to", ast.operands[1].name
     assert_instance_of Or, ast.operands[1].value
@@ -678,12 +678,12 @@ class GmailSearchSyntaxTest < Minitest::Test
   def test_mixing_parentheses_and_curly_braces
     ast = GmailSearchSyntax.parse!("from:{alice@ bob@} subject:(urgent meeting)")
     assert_instance_of And, ast
-    
+
     assert_equal 2, ast.operands.length
     assert_instance_of Operator, ast.operands[0]
     assert_equal "from", ast.operands[0].name
     assert_instance_of Or, ast.operands[0].value
-    
+
     assert_instance_of Operator, ast.operands[1]
     assert_equal "subject", ast.operands[1].name
     assert_instance_of And, ast.operands[1].value

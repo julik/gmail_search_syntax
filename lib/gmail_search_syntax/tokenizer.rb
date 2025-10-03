@@ -41,19 +41,19 @@ module GmailSearchSyntax
         char = current_char
 
         case char
-        when '('
+        when "("
           add_token(:lparen, char)
           advance
-        when ')'
+        when ")"
           add_token(:rparen, char)
           advance
-        when '{'
+        when "{"
           add_token(:lbrace, char)
           advance
-        when '}'
+        when "}"
           add_token(:rbrace, char)
           advance
-        when '-'
+        when "-"
           next_char = peek_char
           if next_char && next_char !~ /\s/
             add_token(:minus, char)
@@ -61,12 +61,12 @@ module GmailSearchSyntax
           else
             read_word
           end
-        when '+'
+        when "+"
           add_token(:plus, char)
           advance
         when '"'
           read_quoted_string
-        when ':'
+        when ":"
           add_token(:colon, char)
           advance
         else
@@ -107,7 +107,7 @@ module GmailSearchSyntax
 
       value = ""
       while @position < @input.length && current_char != '"'
-        if current_char == '\\'
+        if current_char == "\\"
           advance
           value += current_char if @position < @input.length
         else
@@ -126,8 +126,8 @@ module GmailSearchSyntax
 
       while @position < @input.length
         char = current_char
-        break if char =~ /[\s():{}]/
-        break if char == '-'
+        break if /[\s():{}]/.match?(char)
+        break if char == "-"
         value += char
         advance
       end
@@ -136,13 +136,13 @@ module GmailSearchSyntax
 
       if LOGICAL_OPERATORS.include?(value)
         add_token(value.downcase.to_sym, value)
-      elsif value =~ /@/
+      elsif /@/.match?(value)
         add_token(:email, value)
-      elsif value =~ /^\d+$/
+      elsif /^\d+$/.match?(value)
         add_token(:number, value.to_i)
       elsif value =~ /^\d{4}\/\d{2}\/\d{2}$/ || value =~ /^\d{2}\/\d{2}\/\d{4}$/
         add_token(:date, value)
-      elsif value =~ /^(\d+)([dmy])$/
+      elsif /^(\d+)([dmy])$/.match?(value)
         add_token(:relative_time, value)
       else
         add_token(:word, value)
@@ -150,4 +150,3 @@ module GmailSearchSyntax
     end
   end
 end
-

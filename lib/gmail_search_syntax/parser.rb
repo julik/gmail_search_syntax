@@ -13,8 +13,8 @@ module GmailSearchSyntax
 
     def parse!
       children = []
-      
-      while !eof?
+
+      until eof?
         node = parse_expression
         children << node if node
       end
@@ -56,12 +56,12 @@ module GmailSearchSyntax
         operands << parse_and_expression
       end
 
-      operands.length == 1 ? operands.first : AST::Or.new(operands)
+      (operands.length == 1) ? operands.first : AST::Or.new(operands)
     end
 
     def parse_and_expression
       operands = []
-      
+
       first = parse_around_expression
       operands << first if first
 
@@ -71,15 +71,15 @@ module GmailSearchSyntax
         operands << operand if operand
       end
 
-      while !eof? && current_token.type != :or && current_token.type != :rparen && 
-            current_token.type != :rbrace && current_token.type != :and
+      while !eof? && current_token.type != :or && current_token.type != :rparen &&
+          current_token.type != :rbrace && current_token.type != :and
         operand = parse_around_expression
         break unless operand
         operands << operand
       end
 
       return nil if operands.empty?
-      operands.length == 1 ? operands.first : AST::And.new(operands)
+      (operands.length == 1) ? operands.first : AST::And.new(operands)
     end
 
     def parse_around_expression
@@ -88,7 +88,7 @@ module GmailSearchSyntax
       if current_token&.type == :around
         advance
         distance = 5
-        
+
         if current_token&.type == :number
           distance = current_token.value
           advance
@@ -142,7 +142,7 @@ module GmailSearchSyntax
 
     def parse_parentheses
       advance
-      
+
       children = []
       while !eof? && current_token.type != :rparen
         node = parse_expression
@@ -152,12 +152,12 @@ module GmailSearchSyntax
 
       advance if current_token&.type == :rparen
 
-      children.length == 1 ? children.first : AST::Group.new(children)
+      (children.length == 1) ? children.first : AST::Group.new(children)
     end
 
     def parse_braces
       advance
-      
+
       children = []
       while !eof? && current_token.type != :rbrace
         node = parse_unary_expression
@@ -167,17 +167,17 @@ module GmailSearchSyntax
 
       advance if current_token&.type == :rbrace
 
-      children.length == 1 ? children.first : AST::Or.new(children)
+      (children.length == 1) ? children.first : AST::Or.new(children)
     end
 
     def parse_operator_or_text
       word = current_token.value
-      
+
       if OPERATORS.include?(word.downcase) && peek_token&.type == :colon
         operator_name = word.downcase
         advance
         advance
-        
+
         value = parse_operator_value
         return AST::Operator.new(operator_name, value)
       end
@@ -218,10 +218,7 @@ module GmailSearchSyntax
         parse_parentheses
       when :lbrace
         parse_braces
-      else
-        nil
       end
     end
   end
 end
-
