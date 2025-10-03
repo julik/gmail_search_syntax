@@ -13,7 +13,17 @@ module GmailSearchSyntax
   autoload :Tokenizer, "gmail_search_syntax/tokenizer"
   autoload :Parser, "gmail_search_syntax/parser"
   autoload :AST, "gmail_search_syntax/ast"
-  autoload :SqlVisitor, "gmail_search_syntax/sql_visitor"
+  autoload :SQLiteVisitor, "gmail_search_syntax/sql_visitor"
+  autoload :PostgresVisitor, "gmail_search_syntax/sql_visitor"
+
+  # Backward compatibility alias (defined lazily)
+  def self.const_missing(name)
+    if name == :SqlVisitor
+      const_set(:SqlVisitor, SQLiteVisitor)
+    else
+      super
+    end
+  end
 
   class EmptyQueryError < StandardError; end
 

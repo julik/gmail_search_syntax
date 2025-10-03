@@ -83,6 +83,23 @@ class SqlVisitorTest < Minitest::Test
     assert_equal ["from", "cc", "bcc", "amy", "from", "cc", "bcc", "david"], params
   end
 
+  def test_or_operator_uses_unique_table_aliases
+    sql, _params = parse_and_visit("from:alice@example.com OR from:bob@example.com")
+
+    # Ensure we have two different aliases (ma1 and ma3, not ma1 twice)
+    # This was a bug where subvisitors would reuse the same alias counter
+    assert_includes sql, "message_addresses ma1"
+    assert_includes sql, "message_addresses ma3"
+
+    # Count occurrences of each alias in the SQL
+    ma1_count = sql.scan(/\bma1\b/).size
+    ma3_count = sql.scan(/\bma3\b/).size
+
+    # Each alias should appear multiple times (in JOIN and WHERE clauses)
+    assert ma1_count > 1, "ma1 should appear multiple times"
+    assert ma3_count > 1, "ma3 should appear multiple times"
+  end
+
   def test_and_operator
     sql, params = parse_and_visit("from:amy AND to:david")
 

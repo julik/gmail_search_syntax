@@ -138,17 +138,49 @@ Required for:
 
 ## SQL Visitor Usage
 
-The `SqlVisitor` class converts parsed AST into SQL queries:
+The library provides two SQL visitor implementations for different database backends:
+
+### SQLiteVisitor
+
+Converts parsed AST into SQLite-compatible SQL queries:
 
 ```ruby
-ast = GmailSearchSyntax.parse!("from:amy@example.com subject:meeting")
-visitor = GmailSearchSyntax::SqlVisitor.new(current_user_email: "me@example.com")
+ast = GmailSearchSyntax.parse!("from:amy@example.com newer_than:7d")
+visitor = GmailSearchSyntax::SQLiteVisitor.new(current_user_email: "me@example.com")
 visitor.visit(ast)
 
 sql, params = visitor.to_query.to_sql
-# sql: "SELECT DISTINCT m.id FROM messages m ..."
-# params: ["from", "cc", "bcc", "amy@example.com", "%meeting%"]
+# sql: "SELECT DISTINCT m.id FROM messages m ... WHERE ... m.internal_date > datetime('now', ?)"
+# params: ["from", "cc", "bcc", "amy@example.com", "-7 days"]
 ```
+
+### PostgresVisitor
+
+Converts parsed AST into PostgreSQL-compatible SQL queries:
+
+```ruby
+ast = GmailSearchSyntax.parse!("from:amy@example.com newer_than:7d")
+visitor = GmailSearchSyntax::PostgresVisitor.new(current_user_email: "me@example.com")
+visitor.visit(ast)
+
+sql, params = visitor.to_query.to_sql
+# sql: "SELECT DISTINCT m.id FROM messages m ... WHERE ... m.internal_date > (NOW() - ?::interval)"
+# params: ["from", "cc", "bcc", "amy@example.com", "7 days"]
+```
+
+**Note**: `SqlVisitor` is an alias for `SQLiteVisitor` for backward compatibility.
+
+### Database-Specific Differences
+
+The main difference between the visitors is in relative date handling:
+
+| Feature | SQLite | PostgreSQL |
+|---------|--------|------------|
+| `older_than:7d` | `datetime('now', '-7 days')` | `NOW() - '7 days'::interval` |
+| `newer_than:3m` | `datetime('now', '-3 months')` | `NOW() - '3 months'::interval` |
+| Parameter format | `"-7 days"` (negative) | `"7 days"` (positive with cast) |
+
+All other query generation is identical between the two visitors.
 
 ### Features
 
@@ -161,7 +193,7 @@ sql, params = visitor.to_query.to_sql
   - `AROUND` → generates `(1 = 0)` no-op condition
 - **Date handling**:
   - Converts dates from `YYYY/MM/DD` to `YYYY-MM-DD`
-  - Parses relative times (`1y`, `2d`, `3m`) to SQLite datetime modifiers
+  - Parses relative times (`1y`, `2d`, `3m`) to database-specific datetime functions
 - **Size parsing**: Converts `10M`, `1G` to bytes
 
 ### Query Object

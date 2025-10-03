@@ -54,6 +54,47 @@ GmailSearchSyntax.parse!("")
 # => raises GmailSearchSyntax::EmptyQueryError
 ```
 
+### Converting to SQL
+
+The gem includes a SQLite visitor that can convert Gmail queries to SQL. Here's a complex example:
+
+```ruby
+require 'gmail_search_syntax'
+
+# A complex Gmail query with multiple operators
+query = '(from:manager OR from:boss) subject:"quarterly review" has:attachment -label:archived after:2024/01/01 larger:5M'
+
+ast = GmailSearchSyntax.parse!(query)
+visitor = GmailSearchSyntax::SQLiteVisitor.new(current_user_email: "user@example.com")
+visitor.visit(ast)
+
+sql, params = visitor.to_query.to_sql
+```
+
+This generates the following SQL:
+
+```sql
+SELECT DISTINCT m.id 
+FROM messages m 
+INNER JOIN message_addresses ma1 ON m.id = ma1.message_id 
+INNER JOIN message_addresses ma3 ON m.id = ma3.message_id 
+INNER JOIN message_labels ml ON m.id = ml.message_id 
+INNER JOIN labels l ON ml.label_id = l.id 
+WHERE ((((ma1.address_type = ? OR ma1.address_type = ? OR ma1.address_type = ?) 
+         AND ma1.email_address = ?) 
+        OR ((ma3.address_type = ? OR ma3.address_type = ? OR ma3.address_type = ?) 
+            AND ma3.email_address = ?)) 
+       AND m.subject LIKE ? 
+       AND m.has_attachment = 1 
+       AND NOT l.name = ? 
+       AND m.internal_date > ? 
+       AND m.size_bytes > ?)
+```
+
+With parameters: `["from", "cc", "bcc", "manager", "from", "cc", "bcc", "boss", "%quarterly review%", "archived", "2024-01-01", 5242880]`
+
+A similar visitor is provided for PostgreSQL.
+
 ## Supported Operators
 
 Email routing: `from:`, `to:`, `cc:`, `bcc:`, `deliveredto:`  

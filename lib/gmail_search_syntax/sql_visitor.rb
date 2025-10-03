@@ -1,13 +1,13 @@
 module GmailSearchSyntax
   class Query
-    attr_reader :conditions, :joins, :params
+    attr_reader :conditions, :joins, :params, :alias_counter
 
-    def initialize
+    def initialize(alias_counter:)
       @conditions = []
       @joins = {}
       @params = []
       @table_aliases = {}
-      @alias_counter = 0
+      @alias_counter = alias_counter
     end
 
     def add_condition(sql_fragment)
@@ -23,8 +23,8 @@ module GmailSearchSyntax
     end
 
     def get_table_alias(table_name, base_alias = nil)
-      @alias_counter += 1
-      base_alias || "#{table_name.split("_").map { |w| w[0] }.join}#{@alias_counter}"
+      counter_value = @alias_counter.next
+      base_alias || "#{table_name.split("_").map { |w| w[0] }.join}#{counter_value}"
     end
 
     def to_sql
@@ -40,10 +40,10 @@ module GmailSearchSyntax
     end
   end
 
-  class SqlVisitor
-    def initialize(current_user_email: nil)
+  class SQLiteVisitor
+    def initialize(current_user_email: nil, alias_counter: (1..).each)
       @current_user_email = current_user_email
-      @query = Query.new
+      @query = Query.new(alias_counter:)
     end
 
     def visit(node)
@@ -121,7 +121,7 @@ module GmailSearchSyntax
       end
 
       if node.value.is_a?(AST::Or) || node.value.is_a?(AST::And) || node.value.is_a?(AST::Group)
-        sub_visitor = SqlVisitor.new(current_user_email: @current_user_email)
+        sub_visitor = self.class.new(current_user_email: @current_user_email, alias_counter: @query.alias_counter)
         sub_visitor.visit(node.value)
         sub_query = sub_visitor.to_query
 
@@ -154,7 +154,7 @@ module GmailSearchSyntax
 
     def visit_subject_operator(node)
       if node.value.is_a?(AST::Or) || node.value.is_a?(AST::And) || node.value.is_a?(AST::Group)
-        sub_visitor = SqlVisitor.new(current_user_email: @current_user_email)
+        sub_visitor = self.class.new(current_user_email: @current_user_email, alias_counter: @query.alias_counter)
         sub_visitor.visit(node.value)
         sub_query = sub_visitor.to_query
 
@@ -339,7 +339,7 @@ module GmailSearchSyntax
     def visit_and(node)
       conditions = []
       node.operands.each do |operand|
-        sub_visitor = SqlVisitor.new(current_user_email: @current_user_email)
+        sub_visitor = self.class.new(current_user_email: @current_user_email, alias_counter: @query.alias_counter)
         sub_visitor.visit(operand)
         sub_query = sub_visitor.to_query
 
@@ -359,7 +359,7 @@ module GmailSearchSyntax
     def visit_or(node)
       conditions = []
       node.operands.each do |operand|
-        sub_visitor = SqlVisitor.new(current_user_email: @current_user_email)
+        sub_visitor = self.class.new(current_user_email: @current_user_email, alias_counter: @query.alias_counter)
         sub_visitor.visit(operand)
         sub_query = sub_visitor.to_query
 
@@ -377,7 +377,7 @@ module GmailSearchSyntax
     end
 
     def visit_not(node)
-      sub_visitor = SqlVisitor.new(current_user_email: @current_user_email)
+      sub_visitor = self.class.new(current_user_email: @current_user_email, alias_counter: @query.alias_counter)
       sub_visitor.visit(node.child)
       sub_query = sub_visitor.to_query
 
@@ -397,7 +397,7 @@ module GmailSearchSyntax
       else
         conditions = []
         node.children.each do |child|
-          sub_visitor = SqlVisitor.new(current_user_email: @current_user_email)
+          sub_visitor = self.class.new(current_user_email: @current_user_email, alias_counter: @query.alias_counter)
           sub_visitor.visit(child)
           sub_query = sub_visitor.to_query
 
@@ -463,6 +463,38 @@ module GmailSearchSyntax
       else
         value.to_i
       end
+    end
+  end
+
+  class PostgresVisitor < SQLiteVisitor
+    # Override to use PostgreSQL's NOW() and INTERVAL syntax
+    def visit_relative_date_operator(node)
+      value = node.value.is_a?(String) ? node.value : node.value.value
+      interval = parse_relative_time_postgres(value)
+      @query.add_param(interval)
+
+      case node.name
+      when "older_than"
+        @query.add_condition("m.internal_date < (NOW() - ?::interval)")
+      when "newer_than"
+        @query.add_condition("m.internal_date > (NOW() - ?::interval)")
+      end
+    end
+
+    private
+
+    def parse_relative_time_postgres(value)
+      match = value.match(/^(\d+)([dmy])$/)
+      return value unless match
+
+      amount = match[1]
+      unit = case match[2]
+      when "d" then "days"
+      when "m" then "months"
+      when "y" then "years"
+      end
+
+      "#{amount} #{unit}"
     end
   end
 end
