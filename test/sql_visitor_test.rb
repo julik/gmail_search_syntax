@@ -44,35 +44,35 @@ class SqlVisitorTest < Minitest::Test
   def test_subject_operator
     sql, params = parse_and_visit("subject:dinner")
 
-    assert_includes sql, "m.subject LIKE ?"
+    assert_includes sql, "m0.subject LIKE ?"
     assert_equal ["%dinner%"], params
   end
 
   def test_after_date_operator
     sql, params = parse_and_visit("after:2004/04/16")
 
-    assert_includes sql, "m.internal_date > ?"
+    assert_includes sql, "m0.internal_date > ?"
     assert_equal ["2004-04-16"], params
   end
 
   def test_before_date_operator
     sql, params = parse_and_visit("before:2004/04/18")
 
-    assert_includes sql, "m.internal_date < ?"
+    assert_includes sql, "m0.internal_date < ?"
     assert_equal ["2004-04-18"], params
   end
 
   def test_older_than_relative
     sql, params = parse_and_visit("older_than:1y")
 
-    assert_includes sql, "m.internal_date < datetime('now', ?)"
+    assert_includes sql, "m0.internal_date < datetime('now', ?)"
     assert_equal ["-1 years"], params
   end
 
   def test_newer_than_relative
     sql, params = parse_and_visit("newer_than:2d")
 
-    assert_includes sql, "m.internal_date > datetime('now', ?)"
+    assert_includes sql, "m0.internal_date > datetime('now', ?)"
     assert_equal ["-2 days"], params
   end
 
@@ -86,10 +86,11 @@ class SqlVisitorTest < Minitest::Test
   def test_or_operator_uses_unique_table_aliases
     sql, _params = parse_and_visit("from:alice@example.com OR from:bob@example.com")
 
-    # Ensure we have two different aliases (ma1 and ma3, not ma1 twice)
+    # Ensure we have two different aliases (ma1 and ma3, not reused)
     # This was a bug where subvisitors would reuse the same alias counter
-    assert_includes sql, "message_addresses ma1"
-    assert_includes sql, "message_addresses ma3"
+    # (ma1 and ma3 because messages table uses fixed m0)
+    assert_includes sql, "message_addresses AS ma1"
+    assert_includes sql, "message_addresses AS ma3"
 
     # Count occurrences of each alias in the SQL
     ma1_count = sql.scan(/\bma1\b/).size
@@ -118,8 +119,8 @@ class SqlVisitorTest < Minitest::Test
     sql, _ = parse_and_visit("dinner -movie")
 
     assert_includes sql, "NOT"
-    assert_includes sql, "m.subject LIKE ?"
-    assert_includes sql, "m.body LIKE ?"
+    assert_includes sql, "m0.subject LIKE ?"
+    assert_includes sql, "m0.body LIKE ?"
   end
 
   def test_label_operator
@@ -134,21 +135,21 @@ class SqlVisitorTest < Minitest::Test
   def test_category_operator
     sql, params = parse_and_visit("category:primary")
 
-    assert_includes sql, "m.category = ?"
+    assert_includes sql, "m0.category = ?"
     assert_equal ["primary"], params
   end
 
   def test_has_attachment
     sql, params = parse_and_visit("has:attachment")
 
-    assert_includes sql, "m.has_attachment = 1"
+    assert_includes sql, "m0.has_attachment = 1"
     assert_equal [], params
   end
 
   def test_has_yellow_star
     sql, params = parse_and_visit('has:"yellow-star"')
 
-    assert_includes sql, "m.has_yellow_star = 1"
+    assert_includes sql, "m0.has_yellow_star = 1"
     assert_equal [], params
   end
 
@@ -187,7 +188,7 @@ class SqlVisitorTest < Minitest::Test
   def test_in_inbox
     sql, params = parse_and_visit("in:inbox")
 
-    assert_includes sql, "m.in_inbox = 1"
+    assert_includes sql, "m0.in_inbox = 1"
     assert_equal [], params
   end
 
@@ -201,50 +202,50 @@ class SqlVisitorTest < Minitest::Test
   def test_is_starred
     sql, params = parse_and_visit("is:starred")
 
-    assert_includes sql, "m.is_starred = 1"
+    assert_includes sql, "m0.is_starred = 1"
     assert_equal [], params
   end
 
   def test_is_unread
     sql, params = parse_and_visit("is:unread")
 
-    assert_includes sql, "m.is_unread = 1"
+    assert_includes sql, "m0.is_unread = 1"
     assert_equal [], params
   end
 
   def test_size_operator
     sql, params = parse_and_visit("size:1000000")
 
-    assert_includes sql, "m.size_bytes = ?"
+    assert_includes sql, "m0.size_bytes = ?"
     assert_equal [1000000], params
   end
 
   def test_larger_operator_with_m_suffix
     sql, params = parse_and_visit("larger:10M")
 
-    assert_includes sql, "m.size_bytes > ?"
+    assert_includes sql, "m0.size_bytes > ?"
     assert_equal [10 * 1024 * 1024], params
   end
 
   def test_smaller_operator
     sql, params = parse_and_visit("smaller:1M")
 
-    assert_includes sql, "m.size_bytes < ?"
+    assert_includes sql, "m0.size_bytes < ?"
     assert_equal [1 * 1024 * 1024], params
   end
 
   def test_rfc822msgid_operator
     sql, params = parse_and_visit("rfc822msgid:200503292@example.com")
 
-    assert_includes sql, "m.rfc822_message_id = ?"
+    assert_includes sql, "m0.rfc822_message_id = ?"
     assert_equal ["200503292@example.com"], params
   end
 
   def test_plain_text_search
     sql, params = parse_and_visit("meeting")
 
-    assert_includes sql, "m.subject LIKE ?"
-    assert_includes sql, "m.body LIKE ?"
+    assert_includes sql, "m0.subject LIKE ?"
+    assert_includes sql, "m0.body LIKE ?"
     assert_equal ["meeting", "%meeting%", "%meeting%"], params
   end
 
@@ -253,8 +254,8 @@ class SqlVisitorTest < Minitest::Test
 
     assert_includes sql, "AND"
     assert_includes sql, "INNER JOIN message_addresses"
-    assert_includes sql, "m.subject LIKE ?"
-    assert_includes sql, "m.has_attachment = 1"
+    assert_includes sql, "m0.subject LIKE ?"
+    assert_includes sql, "m0.has_attachment = 1"
   end
 
   def test_or_with_parentheses
@@ -288,14 +289,14 @@ class SqlVisitorTest < Minitest::Test
   def test_list_operator
     sql, params = parse_and_visit("list:info@example.com")
 
-    assert_includes sql, "m.mailing_list = ?"
+    assert_includes sql, "m0.mailing_list = ?"
     assert_equal ["info@example.com"], params
   end
 
   def test_list_with_suffix_match
     sql, params = parse_and_visit("list:@example.com")
 
-    assert_includes sql, "m.mailing_list LIKE ?"
+    assert_includes sql, "m0.mailing_list LIKE ?"
     assert_equal ["%@example.com"], params
   end
 
@@ -333,7 +334,7 @@ class SqlVisitorTest < Minitest::Test
 
     assert_includes sql, "AND"
     assert_includes sql, "OR"
-    assert_includes sql, "m.subject LIKE ?"
+    assert_includes sql, "m0.subject LIKE ?"
   end
 
   def test_multiple_joins_with_same_table

@@ -29,13 +29,9 @@ module GmailSearchSyntax
 
     def to_sql
       where_clause = @conditions.empty? ? "1 = 1" : @conditions.join(" ")
-
-      base_query = "SELECT DISTINCT m.id FROM messages m"
-
+      base_query = "SELECT DISTINCT m0.id FROM messages AS m0"
       join_clause = @joins.values.join(" ")
-
       full_query = [base_query, join_clause, "WHERE", where_clause].reject(&:empty?).join(" ")
-
       [full_query, @params]
     end
   end
@@ -126,7 +122,7 @@ module GmailSearchSyntax
         sub_query = sub_visitor.to_query
 
         alias_name = @query.get_table_alias("message_addresses", "ma#{@query.get_table_alias("message_addresses").gsub(/\D/, "")}")
-        @query.add_join(alias_name, "INNER JOIN message_addresses #{alias_name} ON m.id = #{alias_name}.message_id")
+        @query.add_join(alias_name, "INNER JOIN message_addresses AS #{alias_name} ON m0.id = #{alias_name}.message_id")
 
         address_type_conditions = address_types.map { |type| "#{alias_name}.address_type = ?" }
         address_types.each { |type| @query.add_param(type) }
@@ -141,7 +137,7 @@ module GmailSearchSyntax
         value = @current_user_email if value == "me" && @current_user_email
 
         alias_name = @query.get_table_alias("message_addresses", "ma#{@query.get_table_alias("message_addresses").gsub(/\D/, "")}")
-        @query.add_join(alias_name, "INNER JOIN message_addresses #{alias_name} ON m.id = #{alias_name}.message_id")
+        @query.add_join(alias_name, "INNER JOIN message_addresses AS #{alias_name} ON m0.id = #{alias_name}.message_id")
 
         address_type_conditions = address_types.map { |type| "#{alias_name}.address_type = ?" }
         address_types.each { |type| @query.add_param(type) }
@@ -159,8 +155,8 @@ module GmailSearchSyntax
         sub_query = sub_visitor.to_query
 
         subject_conditions = sub_query.conditions.map { |cond|
-          cond.gsub("messages_fts MATCH ?", "m.subject LIKE ?")
-            .gsub("(1 = 1)", "m.subject LIKE ?")
+          cond.gsub("messages_fts MATCH ?", "m0.subject LIKE ?")
+            .gsub("(1 = 1)", "m0.subject LIKE ?")
         }
         sub_query.params.each { |param| @query.add_param("%#{param}%") }
 
@@ -168,7 +164,7 @@ module GmailSearchSyntax
       else
         value = node.value.is_a?(String) ? node.value : node.value.value
         @query.add_param("%#{value}%")
-        @query.add_condition("m.subject LIKE ?")
+        @query.add_condition("m0.subject LIKE ?")
       end
     end
 
@@ -179,9 +175,9 @@ module GmailSearchSyntax
 
       case node.name
       when "after", "newer"
-        @query.add_condition("m.internal_date > ?")
+        @query.add_condition("m0.internal_date > ?")
       when "before", "older"
-        @query.add_condition("m.internal_date < ?")
+        @query.add_condition("m0.internal_date < ?")
       end
     end
 
@@ -192,9 +188,9 @@ module GmailSearchSyntax
 
       case node.name
       when "older_than"
-        @query.add_condition("m.internal_date < datetime('now', ?)")
+        @query.add_condition("m0.internal_date < datetime('now', ?)")
       when "newer_than"
-        @query.add_condition("m.internal_date > datetime('now', ?)")
+        @query.add_condition("m0.internal_date > datetime('now', ?)")
       end
     end
 
@@ -205,8 +201,8 @@ module GmailSearchSyntax
       label_alias = @query.get_table_alias("labels", "l")
 
       @query.add_join("#{alias_name}_#{label_alias}",
-        "INNER JOIN message_labels #{alias_name} ON m.id = #{alias_name}.message_id " \
-        "INNER JOIN labels #{label_alias} ON #{alias_name}.label_id = #{label_alias}.id")
+        "INNER JOIN message_labels AS #{alias_name} ON m0.id = #{alias_name}.message_id " \
+        "INNER JOIN labels AS #{label_alias} ON #{alias_name}.label_id = #{label_alias}.id")
 
       @query.add_param(value)
       @query.add_condition("#{label_alias}.name = ?")
@@ -215,7 +211,7 @@ module GmailSearchSyntax
     def visit_category_operator(node)
       value = node.value.is_a?(String) ? node.value : node.value.value
       @query.add_param(value)
-      @query.add_condition("m.category = ?")
+      @query.add_condition("m0.category = ?")
     end
 
     def visit_has_operator(node)
@@ -223,24 +219,24 @@ module GmailSearchSyntax
 
       case value
       when "attachment", "youtube", "drive", "document", "spreadsheet", "presentation"
-        @query.add_condition("m.has_#{value} = 1")
+        @query.add_condition("m0.has_#{value} = 1")
       when "yellow-star", "orange-star", "red-star", "purple-star", "blue-star", "green-star",
            "red-bang", "orange-guillemet", "yellow-bang", "green-check", "blue-info", "purple-question"
         column_name = value.tr("-", "_")
-        @query.add_condition("m.has_#{column_name} = 1")
+        @query.add_condition("m0.has_#{column_name} = 1")
       when "userlabels"
         alias_name = @query.get_table_alias("message_labels", "ml")
         label_alias = @query.get_table_alias("labels", "l")
 
         @query.add_join("#{alias_name}_#{label_alias}_userlabels",
-          "INNER JOIN message_labels #{alias_name} ON m.id = #{alias_name}.message_id " \
-          "INNER JOIN labels #{label_alias} ON #{alias_name}.label_id = #{label_alias}.id")
+          "INNER JOIN message_labels AS #{alias_name} ON m0.id = #{alias_name}.message_id " \
+          "INNER JOIN labels AS #{label_alias} ON #{alias_name}.label_id = #{label_alias}.id")
 
         @query.add_condition("#{label_alias}.is_system_label = 0")
       when "nouserlabels"
-        @query.add_condition("NOT EXISTS (SELECT 1 FROM message_labels ml " \
-          "INNER JOIN labels l ON ml.label_id = l.id " \
-          "WHERE ml.message_id = m.id AND l.is_system_label = 0)")
+        @query.add_condition("NOT EXISTS (SELECT 1 FROM message_labels AS ml " \
+          "INNER JOIN labels AS l ON ml.label_id = l.id " \
+          "WHERE ml.message_id = m0.id AND l.is_system_label = 0)")
       else
         raise "Unknown has: value: #{value}"
       end
@@ -248,7 +244,7 @@ module GmailSearchSyntax
 
     def visit_list_operator(node)
       value = node.value.is_a?(String) ? node.value : node.value.value
-      condition = build_string_match_condition("m.mailing_list", value)
+      condition = build_string_match_condition("m0.mailing_list", value)
       @query.add_condition(condition)
     end
 
@@ -256,7 +252,7 @@ module GmailSearchSyntax
       value = node.value.is_a?(String) ? node.value : node.value.value
 
       alias_name = @query.get_table_alias("attachments", "a")
-      @query.add_join(alias_name, "INNER JOIN attachments #{alias_name} ON m.id = #{alias_name}.message_id")
+      @query.add_join(alias_name, "INNER JOIN attachments AS #{alias_name} ON m0.id = #{alias_name}.message_id")
 
       if value.include?(".")
         @query.add_param(value)
@@ -275,15 +271,15 @@ module GmailSearchSyntax
       when "anywhere"
         nil
       when "inbox"
-        @query.add_condition("m.in_inbox = 1")
+        @query.add_condition("m0.in_inbox = 1")
       when "archive"
-        @query.add_condition("m.in_archive = 1")
+        @query.add_condition("m0.in_archive = 1")
       when "snoozed"
-        @query.add_condition("m.in_snoozed = 1")
+        @query.add_condition("m0.in_snoozed = 1")
       when "spam"
-        @query.add_condition("m.in_spam = 1")
+        @query.add_condition("m0.in_spam = 1")
       when "trash"
-        @query.add_condition("m.in_trash = 1")
+        @query.add_condition("m0.in_trash = 1")
       else
         raise "Unknown in: value: #{value}"
       end
@@ -294,15 +290,15 @@ module GmailSearchSyntax
 
       case value
       when "important"
-        @query.add_condition("m.is_important = 1")
+        @query.add_condition("m0.is_important = 1")
       when "starred"
-        @query.add_condition("m.is_starred = 1")
+        @query.add_condition("m0.is_starred = 1")
       when "unread"
-        @query.add_condition("m.is_unread = 1")
+        @query.add_condition("m0.is_unread = 1")
       when "read"
-        @query.add_condition("m.is_read = 1")
+        @query.add_condition("m0.is_read = 1")
       when "muted"
-        @query.add_condition("m.is_muted = 1")
+        @query.add_condition("m0.is_muted = 1")
       else
         raise "Unknown is: value: #{value}"
       end
@@ -315,23 +311,23 @@ module GmailSearchSyntax
 
       case node.name
       when "size"
-        @query.add_condition("m.size_bytes = ?")
+        @query.add_condition("m0.size_bytes = ?")
       when "larger"
-        @query.add_condition("m.size_bytes > ?")
+        @query.add_condition("m0.size_bytes > ?")
       when "smaller"
-        @query.add_condition("m.size_bytes < ?")
+        @query.add_condition("m0.size_bytes < ?")
       end
     end
 
     def visit_rfc822msgid_operator(node)
       value = node.value.is_a?(String) ? node.value : node.value.value
       @query.add_param(value)
-      @query.add_condition("m.rfc822_message_id = ?")
+      @query.add_condition("m0.rfc822_message_id = ?")
     end
 
     def visit_text(node)
       @query.add_param(node.value)
-      @query.add_condition("(m.subject LIKE ? OR m.body LIKE ?)")
+      @query.add_condition("(m0.subject LIKE ? OR m0.body LIKE ?)")
       @query.add_param("%#{node.value}%")
       @query.add_param("%#{node.value}%")
     end
@@ -475,9 +471,9 @@ module GmailSearchSyntax
 
       case node.name
       when "older_than"
-        @query.add_condition("m.internal_date < (NOW() - ?::interval)")
+        @query.add_condition("m0.internal_date < (NOW() - ?::interval)")
       when "newer_than"
-        @query.add_condition("m.internal_date > (NOW() - ?::interval)")
+        @query.add_condition("m0.internal_date > (NOW() - ?::interval)")
       end
     end
 
