@@ -23,10 +23,3 @@ queries.each do |query|
   puts
 end
 
-puts "Empty query handling:"
-begin
-  GmailSearchSyntax.parse!("")
-rescue GmailSearchSyntax::EmptyQueryError => e
-  puts "  Error: #{e.message}"
-end
-

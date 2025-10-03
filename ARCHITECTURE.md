@@ -270,11 +270,8 @@ ast.operands[1].name   # => "subject"
 ast.operands[1].value  # => "meeting"
 
 # Empty queries raise an error
-begin
-  GmailSearchSyntax.parse!("")
-rescue GmailSearchSyntax::EmptyQueryError => e
-  puts e.message  # => "Query cannot be empty"
-end
+GmailSearchSyntax.parse!("")
+# => raises GmailSearchSyntax::EmptyQueryError: "Query cannot be empty"
 ```
 
 ## Design Decisions
