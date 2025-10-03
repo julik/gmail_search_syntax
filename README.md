@@ -6,7 +6,7 @@ Based on the official Gmail search operators documentation:
 https://support.google.com/mail/answer/7190
 
 > [!TIP]
-> This gem was created for [Cora,](https://cora.computer/) your personal e-mail assistant.
+> This gem was created for [Cora,](https://cora.computer/) your personal e-mail assistant. 
 > Send them some love for allowing me to share it.
 
 ## Installation
