@@ -210,16 +210,12 @@ class GmailSearchSyntaxTest < Minitest::Test
   end
 
   def test_in_anywhere
+    # With Gmail-compatible bareword consumption, "movie" gets consumed into operator value
+    # To search for "movie" as text, use: in:anywhere "movie" or use a different operator after
     ast = GmailSearchSyntax.parse!("in:anywhere movie")
-    assert_instance_of And, ast
-
-    assert_equal 2, ast.operands.length
-    assert_instance_of Operator, ast.operands[0]
-    assert_equal "in", ast.operands[0].name
-    assert_equal "anywhere", ast.operands[0].value
-
-    assert_instance_of StringToken, ast.operands[1]
-    assert_equal "movie", ast.operands[1].value
+    assert_instance_of Operator, ast
+    assert_equal "in", ast.name
+    assert_equal "anywhere movie", ast.value
   end
 
   def test_is_starred
@@ -733,5 +729,94 @@ class GmailSearchSyntaxTest < Minitest::Test
     assert_equal 2, ast.operands.length
     assert_equal 'meeting"room', ast.operands[0].value
     assert_equal 'project\\plan', ast.operands[1].value
+  end
+
+  # Gmail behavior: barewords after operator values get consumed into the operator value
+  # until the next operator is encountered.
+  # We now implement this Gmail-compatible behavior.
+
+  def test_label_with_space_separated_value_gmail_behavior
+    # Gmail parses this as: label:"Cora/Google Drive", label:"Notes"
+    # We now match this behavior
+    ast = GmailSearchSyntax.parse!("label:Cora/Google Drive label:Notes")
+    assert_instance_of And, ast
+    assert_equal 2, ast.operands.length
+
+    # Gmail-compatible: barewords consumed into operator value
+    assert_instance_of Operator, ast.operands[0]
+    assert_equal "label", ast.operands[0].name
+    assert_equal "Cora/Google Drive", ast.operands[0].value
+
+    # Second operator parsed correctly
+    assert_instance_of Operator, ast.operands[1]
+    assert_equal "label", ast.operands[1].name
+    assert_equal "Notes", ast.operands[1].value
+  end
+
+  def test_subject_with_barewords_gmail_behavior
+    # Gmail parses: subject:"urgent meeting important"
+    # We now match this behavior
+    ast = GmailSearchSyntax.parse!("subject:urgent meeting important")
+    assert_instance_of Operator, ast
+
+    assert_equal "subject", ast.name
+    assert_equal "urgent meeting important", ast.value
+  end
+
+  def test_multiple_barewords_between_operators_gmail_behavior
+    # Gmail parses: label:"test one two three", label:"another"
+    # We now match this behavior
+    ast = GmailSearchSyntax.parse!("label:test one two three label:another")
+    assert_instance_of And, ast
+    assert_equal 2, ast.operands.length
+
+    assert_instance_of Operator, ast.operands[0]
+    assert_equal "label", ast.operands[0].name
+    assert_equal "test one two three", ast.operands[0].value
+
+    assert_instance_of Operator, ast.operands[1]
+    assert_equal "label", ast.operands[1].name
+    assert_equal "another", ast.operands[1].value
+  end
+
+  def test_barewords_stop_at_special_operators
+    # Bareword collection should stop at OR, AND, AROUND
+    ast = GmailSearchSyntax.parse!("subject:urgent meeting OR subject:important call")
+    assert_instance_of Or, ast
+    assert_equal 2, ast.operands.length
+
+    assert_instance_of Operator, ast.operands[0]
+    assert_equal "subject", ast.operands[0].name
+    assert_equal "urgent meeting", ast.operands[0].value
+
+    assert_instance_of Operator, ast.operands[1]
+    assert_equal "subject", ast.operands[1].name
+    assert_equal "important call", ast.operands[1].value
+  end
+
+  def test_barewords_with_mixed_tokens
+    # Numbers, dates, emails should all be collected as barewords
+    ast = GmailSearchSyntax.parse!("subject:meeting 2024 Q1 review")
+    assert_instance_of Operator, ast
+    assert_equal "subject", ast.name
+    assert_equal "meeting 2024 Q1 review", ast.value
+  end
+
+  def test_specific_gmail_example_cora_google_drive
+    # The specific example from the user: label:Cora/Google Drive label:Notes
+    # This should parse as two separate label operators with multi-word values
+    ast = GmailSearchSyntax.parse!("label:Cora/Google Drive label:Notes")
+    assert_instance_of And, ast
+    assert_equal 2, ast.operands.length
+
+    # First operator: label with "Cora/Google Drive"
+    assert_instance_of Operator, ast.operands[0]
+    assert_equal "label", ast.operands[0].name
+    assert_equal "Cora/Google Drive", ast.operands[0].value
+
+    # Second operator: label with "Notes"
+    assert_instance_of Operator, ast.operands[1]
+    assert_equal "label", ast.operands[1].name
+    assert_equal "Notes", ast.operands[1].value
   end
 end
