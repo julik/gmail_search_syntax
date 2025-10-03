@@ -8,12 +8,12 @@ module GmailSearchSyntax
       @position = position
     end
 
-    def ==(other)
-      other.is_a?(Token) && @type == other.type && @value == other.value
+    def to_s
+      inspect
     end
 
     def inspect
-      "#<Token #{@type} #{@value.inspect}>"
+      {type: @type, value: @value, offset: @position}.inspect
     end
   end
 

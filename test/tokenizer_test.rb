@@ -5,235 +5,267 @@ class TokenizerTest < Minitest::Test
     GmailSearchSyntax::Tokenizer.new(input).tokenize
   end
 
+  def assert_token_stream(expected_tokens, actual_tokens)
+    assert expected_tokens.length > 0
+    assert_equal expected_tokens.length, actual_tokens.length, "Expected #{expected_tokens.length} tokens, got #{actual_tokens.length}"
+
+    expected_tokens.each_with_index do |expected_token, index|
+      actual_token = actual_tokens[index]
+      expected_token.each do |property, expected_value|
+        actual_value = actual_token.public_send(property)
+        assert_equal expected_value, actual_value, "Token #{index} #{actual_token}: expected #{property} to be #{expected_value.inspect}, got #{actual_value.inspect}"
+      end
+    end
+  end
+
   def test_tokenize_simple_from
     tokens = tokenize("from:amy@example.com")
-    assert_equal 4, tokens.length
-    assert_equal :word, tokens[0].type
-    assert_equal "from", tokens[0].value
-    assert_equal :colon, tokens[1].type
-    assert_equal :email, tokens[2].type
-    assert_equal "amy@example.com", tokens[2].value
-    assert_equal :eof, tokens[3].type
+    expected = [
+      {type: :word, value: "from"},
+      {type: :colon},
+      {type: :email, value: "amy@example.com"},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
   end
 
   def test_tokenize_quoted_string
     tokens = tokenize('"hello world"')
-    assert_equal 2, tokens.length
-    assert_equal :quoted_string, tokens[0].type
-    assert_equal "hello world", tokens[0].value
+    expected = [
+      {type: :quoted_string, value: "hello world"},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
   end
 
   def test_tokenize_operators
     tokens = tokenize("from:amy@example.com OR to:bob@example.com")
-
-    assert_equal 8, tokens.length
-    assert_equal :word, tokens[0].type
-    assert_equal "from", tokens[0].value
-    assert_equal :colon, tokens[1].type
-    assert_equal :email, tokens[2].type
-    assert_equal "amy@example.com", tokens[2].value
-    assert_equal :or, tokens[3].type
-    assert_equal :word, tokens[4].type
-    assert_equal "to", tokens[4].value
-    assert_equal :colon, tokens[5].type
-    assert_equal :email, tokens[6].type
-    assert_equal "bob@example.com", tokens[6].value
-    assert_equal :eof, tokens[7].type
+    expected = [
+      {type: :word, value: "from"},
+      {type: :colon},
+      {type: :email, value: "amy@example.com"},
+      {type: :or},
+      {type: :word, value: "to"},
+      {type: :colon},
+      {type: :email, value: "bob@example.com"},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
   end
 
   def test_tokenize_parentheses
     tokens = tokenize("subject:(meeting call)")
-
-    assert_equal 7, tokens.length
-    assert_equal :word, tokens[0].type
-    assert_equal "subject", tokens[0].value
-    assert_equal :colon, tokens[1].type
-    assert_equal :lparen, tokens[2].type
-    assert_equal :word, tokens[3].type
-    assert_equal "meeting", tokens[3].value
-    assert_equal :word, tokens[4].type
-    assert_equal "call", tokens[4].value
-    assert_equal :rparen, tokens[5].type
-    assert_equal :eof, tokens[6].type
+    expected = [
+      {type: :word, value: "subject"},
+      {type: :colon},
+      {type: :lparen},
+      {type: :word, value: "meeting"},
+      {type: :word, value: "call"},
+      {type: :rparen},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
   end
 
   def test_tokenize_braces
     tokens = tokenize("{from:a from:b}")
-
-    assert_equal 9, tokens.length
-    assert_equal :lbrace, tokens[0].type
-    assert_equal :word, tokens[1].type
-    assert_equal "from", tokens[1].value
-    assert_equal :colon, tokens[2].type
-    assert_equal :word, tokens[3].type
-    assert_equal "a", tokens[3].value
-    assert_equal :word, tokens[4].type
-    assert_equal "from", tokens[4].value
-    assert_equal :colon, tokens[5].type
-    assert_equal :word, tokens[6].type
-    assert_equal "b", tokens[6].value
-    assert_equal :rbrace, tokens[7].type
-    assert_equal :eof, tokens[8].type
+    expected = [
+      {type: :lbrace},
+      {type: :word, value: "from"},
+      {type: :colon},
+      {type: :word, value: "a"},
+      {type: :word, value: "from"},
+      {type: :colon},
+      {type: :word, value: "b"},
+      {type: :rbrace},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
   end
 
   def test_tokenize_negation
     tokens = tokenize("dinner -movie")
-    assert_equal 4, tokens.length
-    assert_equal :word, tokens[0].type
-    assert_equal "dinner", tokens[0].value
-    assert_equal :minus, tokens[1].type
-    assert_equal :word, tokens[2].type
-    assert_equal "movie", tokens[2].value
+    expected = [
+      {type: :word, value: "dinner"},
+      {type: :minus},
+      {type: :word, value: "movie"},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
   end
 
   def test_tokenize_around
     tokens = tokenize("holiday AROUND 10 vacation")
-
-    assert_equal 5, tokens.length
-    assert_equal :word, tokens[0].type
-    assert_equal "holiday", tokens[0].value
-    assert_equal :around, tokens[1].type
-    assert_equal :number, tokens[2].type
-    assert_equal 10, tokens[2].value
-    assert_equal :word, tokens[3].type
-    assert_equal "vacation", tokens[3].value
-    assert_equal :eof, tokens[4].type
+    expected = [
+      {type: :word, value: "holiday"},
+      {type: :around},
+      {type: :number, value: 10},
+      {type: :word, value: "vacation"},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
   end
 
   def test_tokenize_date
     tokens = tokenize("after:2004/04/16")
-    assert_equal 4, tokens.length
-    assert_equal :word, tokens[0].type
-    assert_equal "after", tokens[0].value
-    assert_equal :colon, tokens[1].type
-    assert_equal :date, tokens[2].type
-    assert_equal "2004/04/16", tokens[2].value
+    expected = [
+      {type: :word, value: "after"},
+      {type: :colon},
+      {type: :date, value: "2004/04/16"},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
   end
 
   def test_tokenize_relative_time
     tokens = tokenize("older_than:1y")
-    assert_equal 4, tokens.length
-    assert_equal :word, tokens[0].type
-    assert_equal "older_than", tokens[0].value
-    assert_equal :colon, tokens[1].type
-    assert_equal :relative_time, tokens[2].type
-    assert_equal "1y", tokens[2].value
+    expected = [
+      {type: :word, value: "older_than"},
+      {type: :colon},
+      {type: :relative_time, value: "1y"},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
   end
 
   def test_tokenize_number
     tokens = tokenize("size:1000000")
-    assert_equal 4, tokens.length
-    assert_equal :word, tokens[0].type
-    assert_equal "size", tokens[0].value
-    assert_equal :colon, tokens[1].type
-    assert_equal :number, tokens[2].type
-    assert_equal 1000000, tokens[2].value
+    expected = [
+      {type: :word, value: "size"},
+      {type: :colon},
+      {type: :number, value: 1000000},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
   end
 
   def test_tokenize_and_operator
     tokens = tokenize("from:amy@example.com AND to:bob@example.com")
-
-    and_token = tokens.find { |t| t.type == :and }
-    refute_nil and_token
-    assert_equal "AND", and_token.value
+    expected = [
+      {type: :word, value: "from"},
+      {type: :colon},
+      {type: :email, value: "amy@example.com"},
+      {type: :and, value: "AND"},
+      {type: :word, value: "to"},
+      {type: :colon},
+      {type: :email, value: "bob@example.com"},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
   end
 
   def test_tokenize_plus
     tokens = tokenize("+unicorn")
-    assert_equal 3, tokens.length
-    assert_equal :plus, tokens[0].type
-    assert_equal :word, tokens[1].type
-    assert_equal "unicorn", tokens[1].value
+    expected = [
+      {type: :plus},
+      {type: :word, value: "unicorn"},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
   end
 
   def test_tokenize_complex_query
     tokens = tokenize('from:boss@example.com subject:"urgent meeting" has:attachment')
-
-    assert_equal 10, tokens.length
-    assert_equal :word, tokens[0].type
-    assert_equal "from", tokens[0].value
-    assert_equal :colon, tokens[1].type
-    assert_equal :email, tokens[2].type
-    assert_equal "boss@example.com", tokens[2].value
-    assert_equal :word, tokens[3].type
-    assert_equal "subject", tokens[3].value
-    assert_equal :colon, tokens[4].type
-    assert_equal :quoted_string, tokens[5].type
-    assert_equal "urgent meeting", tokens[5].value
-    assert_equal :word, tokens[6].type
-    assert_equal "has", tokens[6].value
-    assert_equal :colon, tokens[7].type
-    assert_equal :word, tokens[8].type
-    assert_equal "attachment", tokens[8].value
-    assert_equal :eof, tokens[9].type
+    expected = [
+      {type: :word, value: "from"},
+      {type: :colon},
+      {type: :email, value: "boss@example.com"},
+      {type: :word, value: "subject"},
+      {type: :colon},
+      {type: :quoted_string, value: "urgent meeting"},
+      {type: :word, value: "has"},
+      {type: :colon},
+      {type: :word, value: "attachment"},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
   end
 
   def test_tokenize_email_with_plus
     tokens = tokenize("to:user+tag@example.com")
-    email_token = tokens.find { |t| t.type == :email }
-    assert_equal "user+tag@example.com", email_token.value
+    expected = [
+      {type: :word, value: "to"},
+      {type: :colon},
+      {type: :email, value: "user+tag@example.com"},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
   end
 
   def test_tokenize_multiple_words
     tokens = tokenize("project report meeting")
-    word_tokens = tokens.select { |t| t.type == :word }
-    assert_equal 3, word_tokens.length
-    assert_equal "project", word_tokens[0].value
-    assert_equal "report", word_tokens[1].value
-    assert_equal "meeting", word_tokens[2].value
+    expected = [
+      {type: :word, value: "project"},
+      {type: :word, value: "report"},
+      {type: :word, value: "meeting"},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
   end
 
   def test_tokenize_quoted_string_with_escaped_quote
     tokens = tokenize('"She said \\"hello\\" to me"')
-    assert_equal 2, tokens.length
-    assert_equal :quoted_string, tokens[0].type
-    assert_equal 'She said "hello" to me', tokens[0].value
-    assert_equal :eof, tokens[1].type
+    expected = [
+      {type: :quoted_string, value: 'She said "hello" to me'},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
   end
 
   def test_tokenize_quoted_string_with_escaped_backslash
     tokens = tokenize('"path\\\\to\\\\file"')
-    assert_equal 2, tokens.length
-    assert_equal :quoted_string, tokens[0].type
-    assert_equal 'path\\to\\file', tokens[0].value
+    expected = [
+      {type: :quoted_string, value: 'path\\to\\file'},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
   end
 
   def test_tokenize_quoted_string_with_multiple_escapes
     tokens = tokenize('"test \\"nested\\" and \\\\ slash"')
-    assert_equal 2, tokens.length
-    assert_equal :quoted_string, tokens[0].type
-    assert_equal 'test "nested" and \\ slash', tokens[0].value
+    expected = [
+      {type: :quoted_string, value: 'test "nested" and \\ slash'},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
   end
 
   def test_tokenize_word_with_escaped_quote
     tokens = tokenize('meeting\\"room')
-    assert_equal 2, tokens.length
-    assert_equal :word, tokens[0].type
-    assert_equal 'meeting"room', tokens[0].value
+    expected = [
+      {type: :word, value: 'meeting"room'},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
   end
 
   def test_tokenize_word_with_escaped_backslash
     tokens = tokenize('path\\\\to')
-    assert_equal 2, tokens.length
-    assert_equal :word, tokens[0].type
-    assert_equal 'path\\to', tokens[0].value
+    expected = [
+      {type: :word, value: 'path\\to'},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
   end
 
   def test_tokenize_multiple_words_with_escapes
     tokens = tokenize('meeting\\"room another\\\\word')
-    word_tokens = tokens.select { |t| t.type == :word }
-    assert_equal 2, word_tokens.length
-    assert_equal 'meeting"room', word_tokens[0].value
-    assert_equal 'another\\word', word_tokens[1].value
+    expected = [
+      {type: :word, value: 'meeting"room'},
+      {type: :word, value: 'another\\word'},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
   end
 
   def test_tokenize_operator_value_with_escaped_quote
     tokens = tokenize('subject:test\\"value')
-    assert_equal 4, tokens.length
-    assert_equal :word, tokens[0].type
-    assert_equal "subject", tokens[0].value
-    assert_equal :colon, tokens[1].type
-    assert_equal :word, tokens[2].type
-    assert_equal 'test"value', tokens[2].value
+    expected = [
+      {type: :word, value: "subject"},
+      {type: :colon},
+      {type: :word, value: 'test"value'},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
   end
 end
