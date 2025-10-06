@@ -9,13 +9,11 @@ Gem::Specification.new do |s|
   s.homepage = "https://github.com/julik/gmail_search_syntax"
   s.required_ruby_version = ">= 3.0"
 
-  s.files = Dir[
-    "lib/**/*.{rb,md}",
-    "test/**/*.rb",
-    "examples/**/*.rb",
-    "*.md",
-    "Rakefile"
-  ]
+  s.files = Dir.chdir(__dir__) do
+    `git ls-files -z`.split("\x0").reject do |f|
+      File.basename(f).start_with?(".")
+    end
+  end
   s.require_paths = ["lib"]
 
   s.add_development_dependency "minitest", "~> 5.0"

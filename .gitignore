@@ -2,4 +2,3 @@ vendor/bundle
 .bundle
 *.gem
 Gemfile.lock
-

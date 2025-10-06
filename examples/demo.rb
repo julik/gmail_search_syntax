@@ -1,8 +1,5 @@
 require_relative "../lib/gmail_search_syntax"
-
-puts "Gmail Search Syntax Parser - Demo"
-puts "=" * 50
-puts
+require "pp"
 
 queries = [
   "from:amy@example.com",
@@ -23,6 +20,5 @@ queries = [
 queries.each do |query|
   puts "Query: #{query}"
   ast = GmailSearchSyntax.parse!(query)
-  puts "AST:   #{ast.inspect}"
-  puts
+  pp ast
 end
