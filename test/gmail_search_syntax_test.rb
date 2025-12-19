@@ -142,6 +142,91 @@ class GmailSearchSyntaxTest < Minitest::Test
     assert_equal "movie", ast.operands[1].child.value
   end
 
+  # Gmail behavior: embedded hyphens (no preceding whitespace) are word separators, not negation
+  # "Coxlee-Gammage" → Coxlee AND Gammage (both tokens highlighted)
+  # "Coxlee -Gammage" → Coxlee AND NOT Gammage (space+hyphen = negation)
+
+  def test_embedded_hyphen_is_word_separator
+    # Gmail behavior: hyphen without preceding whitespace separates words, not negation
+    ast = GmailSearchSyntax.parse!("some-outfit")
+    assert_instance_of And, ast
+
+    assert_equal 2, ast.operands.length
+    assert_instance_of StringToken, ast.operands[0]
+    assert_equal "some", ast.operands[0].value
+
+    assert_instance_of StringToken, ast.operands[1]
+    assert_equal "outfit", ast.operands[1].value
+  end
+
+  def test_embedded_hyphen_multiple
+    # Multiple hyphens: a-b-c → a AND b AND c
+    ast = GmailSearchSyntax.parse!("a-b-c")
+    assert_instance_of And, ast
+
+    assert_equal 3, ast.operands.length
+    assert_equal "a", ast.operands[0].value
+    assert_equal "b", ast.operands[1].value
+    assert_equal "c", ast.operands[2].value
+  end
+
+  def test_embedded_hyphen_real_name
+    # Real-world case: hyphenated names
+    ast = GmailSearchSyntax.parse!("Coxlee-Gammage")
+    assert_instance_of And, ast
+
+    assert_equal 2, ast.operands.length
+    assert_equal "Coxlee", ast.operands[0].value
+    assert_equal "Gammage", ast.operands[1].value
+  end
+
+  def test_space_hyphen_is_negation
+    # Space + hyphen = negation (unchanged behavior)
+    ast = GmailSearchSyntax.parse!("cats -dogs")
+    assert_instance_of And, ast
+
+    assert_equal 2, ast.operands.length
+    assert_instance_of StringToken, ast.operands[0]
+    assert_equal "cats", ast.operands[0].value
+
+    assert_instance_of Not, ast.operands[1]
+    assert_equal "dogs", ast.operands[1].child.value
+  end
+
+  def test_embedded_hyphen_combined_with_negation
+    # Mixed: embedded hyphen + space-preceded negation
+    ast = GmailSearchSyntax.parse!("some-outfit -dogs")
+    assert_instance_of And, ast
+
+    assert_equal 3, ast.operands.length
+    assert_equal "some", ast.operands[0].value
+    assert_equal "outfit", ast.operands[1].value
+    assert_instance_of Not, ast.operands[2]
+    assert_equal "dogs", ast.operands[2].child.value
+  end
+
+  def test_negation_at_start_of_input
+    # Negation at start of input still works
+    ast = GmailSearchSyntax.parse!("-spam")
+    assert_instance_of Not, ast
+    assert_equal "spam", ast.child.value
+  end
+
+  def test_embedded_hyphen_with_operator
+    # Embedded hyphen in operator context
+    ast = GmailSearchSyntax.parse!("from:mary-jane")
+    assert_instance_of And, ast
+
+    # "from:mary" becomes operator, "-jane" is embedded hyphen → "jane" is separate word
+    assert_equal 2, ast.operands.length
+    assert_instance_of Operator, ast.operands[0]
+    assert_equal "from", ast.operands[0].name
+    assert_equal "mary", ast.operands[0].value
+
+    assert_instance_of StringToken, ast.operands[1]
+    assert_equal "jane", ast.operands[1].value
+  end
+
   def test_around_operator
     ast = GmailSearchSyntax.parse!("holiday AROUND 10 vacation")
     assert_instance_of Around, ast
