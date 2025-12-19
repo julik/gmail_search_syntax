@@ -55,8 +55,15 @@ module GmailSearchSyntax
           advance
         when "-"
           next_char = peek_char
-          if next_char && next_char !~ /\s/
+          prev_char = (@position > 0) ? @input[@position - 1] : nil
+          # Negation requires: non-whitespace follows AND (start of input OR whitespace precedes)
+          # Gmail behavior: "Coxlee-Gammage" → Coxlee AND Gammage (hyphen is word separator)
+          #                 "Coxlee -Gammage" → Coxlee AND NOT Gammage (space+hyphen = negation)
+          if next_char && next_char !~ /\s/ && (prev_char.nil? || prev_char =~ /\s/)
             add_token(:minus, char)
+            advance
+          elsif prev_char && prev_char !~ /\s/
+            # Embedded hyphen (preceded by non-whitespace) - skip it as word separator
             advance
           else
             read_word

@@ -94,6 +94,64 @@ class TokenizerTest < Minitest::Test
     assert_token_stream(expected, tokens)
   end
 
+  def test_tokenize_embedded_hyphen
+    # Gmail behavior: embedded hyphen (no preceding whitespace) is a word separator, not negation
+    tokens = tokenize("some-outfit")
+    expected = [
+      {type: :word, value: "some"},
+      {type: :word, value: "outfit"},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
+  end
+
+  def test_tokenize_multiple_embedded_hyphens
+    # Multiple hyphens: a-b-c → three separate words
+    tokens = tokenize("a-b-c")
+    expected = [
+      {type: :word, value: "a"},
+      {type: :word, value: "b"},
+      {type: :word, value: "c"},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
+  end
+
+  def test_tokenize_hyphenated_name
+    # Real-world case: hyphenated names like "Coxlee-Gammage"
+    tokens = tokenize("Coxlee-Gammage")
+    expected = [
+      {type: :word, value: "Coxlee"},
+      {type: :word, value: "Gammage"},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
+  end
+
+  def test_tokenize_negation_at_start
+    # Negation at start of input
+    tokens = tokenize("-spam")
+    expected = [
+      {type: :minus},
+      {type: :word, value: "spam"},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
+  end
+
+  def test_tokenize_embedded_hyphen_vs_negation
+    # Mixed: embedded hyphen + space-preceded negation
+    tokens = tokenize("some-outfit -dogs")
+    expected = [
+      {type: :word, value: "some"},
+      {type: :word, value: "outfit"},
+      {type: :minus},
+      {type: :word, value: "dogs"},
+      {type: :eof}
+    ]
+    assert_token_stream(expected, tokens)
+  end
+
   def test_tokenize_around
     tokens = tokenize("holiday AROUND 10 vacation")
     expected = [
