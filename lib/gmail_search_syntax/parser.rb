@@ -195,47 +195,17 @@ module GmailSearchSyntax
       when :lbrace
         parse_braces
       when :quoted_string
-        # Quoted strings are consumed as-is, no bareword collection
         value = current_token.value
         advance
         value
       when :word, :email, :number, :date, :relative_time
-        # Collect the initial value and any following barewords
-        # until we hit an operator, special token, or grouping
-        values = []
-        types = []
-
-        # Collect barewords
-        while !eof? && is_bareword_token?
-          # Check if this word is actually an operator (word followed by colon)
-          if current_token.type == :word && peek_token&.type == :colon
-            break
-          end
-
-          values << current_token.value
-          types << current_token.type
-          advance
-        end
-
-        # If we only collected one value and it's a number, preserve its type
-        if values.length == 1 && types[0] == :number
-          values[0]
-        else
-          # Multiple values or non-number: join as string
-          values.map(&:to_s).join(" ")
-        end
-      end
-    end
-
-    def is_bareword_token?
-      return false if eof?
-
-      # Barewords are simple value tokens, not operators or special syntax
-      case current_token.type
-      when :word, :email, :number, :date, :relative_time
-        true
-      else
-        false
+        # Take only a single token as the operator value.
+        # Multi-word values must be explicitly quoted: from:"john smith"
+        # This matches Gmail's actual search behavior where bare words
+        # after an operator are treated as separate search terms.
+        value = current_token.value
+        advance
+        value.is_a?(Integer) ? value : value.to_s
       end
     end
   end
