@@ -76,6 +76,11 @@ module GmailSearchSyntax
         when ":"
           add_token(:colon, char)
           advance
+          # After a colon following an operator word, read the value including hyphens
+          # Gmail: label:foo-bar → operator "label" with value "foo-bar"
+          if in_operator_context? && @position < @input.length && current_char !~ /[\s(){}]/
+            read_operator_value
+          end
         else
           read_word
         end
@@ -107,6 +112,68 @@ module GmailSearchSyntax
 
     def add_token(type, value)
       @tokens << Token.new(type, value, @position)
+    end
+
+    # Check if we're in operator context (last non-colon token is an operator word)
+    def in_operator_context?
+      # Find the last token before the colon we just added
+      return false if @tokens.size < 2
+      prev_token = @tokens[-2]
+      prev_token.type == :word && OPERATORS.include?(prev_token.value.downcase)
+    end
+
+    # Read an operator value, which can include hyphens
+    # Gmail treats label:foo-bar as operator "label" with value "foo-bar"
+    def read_operator_value
+      # Handle quoted strings normally
+      if current_char == '"'
+        read_quoted_string
+        return
+      end
+
+      # Handle parentheses/braces - these start grouped values
+      if current_char == "(" || current_char == "{"
+        return # Let the main loop handle these
+      end
+
+      value = ""
+      while @position < @input.length
+        char = current_char
+        break if /[\s():{}]/.match?(char)
+        # Include hyphens in operator values (unlike regular words)
+
+        if char == "\\"
+          advance
+          if @position < @input.length
+            next_char = current_char
+            value += case next_char
+            when '"', "\\"
+              next_char
+            else
+              "\\" + next_char
+            end
+            advance
+          end
+        else
+          value += char
+          advance
+        end
+      end
+
+      return if value.empty?
+
+      # Classify the value
+      if /@/.match?(value)
+        add_token(:email, value)
+      elsif /^\d+$/.match?(value)
+        add_token(:number, value.to_i)
+      elsif value =~ /^\d{4}\/\d{2}\/\d{2}$/ || value =~ /^\d{2}\/\d{2}\/\d{4}$/
+        add_token(:date, value)
+      elsif /^(\d+)([dmy])$/.match?(value)
+        add_token(:relative_time, value)
+      else
+        add_token(:word, value)
+      end
     end
 
     def read_quoted_string

@@ -213,18 +213,26 @@ class GmailSearchSyntaxTest < Minitest::Test
   end
 
   def test_embedded_hyphen_with_operator
-    # Embedded hyphen in operator context
+    # Gmail keeps hyphens in operator values: from:mary-jane → operator with value "mary-jane"
     ast = GmailSearchSyntax.parse!("from:mary-jane")
-    assert_instance_of And, ast
+    assert_instance_of Operator, ast
+    assert_equal "from", ast.name
+    assert_equal "mary-jane", ast.value
+  end
 
-    # "from:mary" becomes operator, "-jane" is embedded hyphen → "jane" is separate word
-    assert_equal 2, ast.operands.length
-    assert_instance_of Operator, ast.operands[0]
-    assert_equal "from", ast.operands[0].name
-    assert_equal "mary", ast.operands[0].value
+  def test_hyphenated_label_name
+    # Common case: label names with hyphens
+    ast = GmailSearchSyntax.parse!("label:work-projects")
+    assert_instance_of Operator, ast
+    assert_equal "label", ast.name
+    assert_equal "work-projects", ast.value
+  end
 
-    assert_instance_of StringToken, ast.operands[1]
-    assert_equal "jane", ast.operands[1].value
+  def test_multiple_hyphens_in_operator_value
+    ast = GmailSearchSyntax.parse!("label:starter-league-thisforthat")
+    assert_instance_of Operator, ast
+    assert_equal "label", ast.name
+    assert_equal "starter-league-thisforthat", ast.value
   end
 
   def test_around_operator
