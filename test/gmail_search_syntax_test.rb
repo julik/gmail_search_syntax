@@ -855,4 +855,21 @@ class GmailSearchSyntaxTest < Minitest::Test
     # Second operator: label with "Notes"
     assert_operator({name: "label", value: "Notes"}, ast.operands[2])
   end
+
+  def test_label_with_consecutive_hyphens
+    # Labels like "Every (Every.To)" get sanitized to "every--every.to-"
+    # Gmail replaces parens, spaces, slashes with hyphens
+    ast = GmailSearchSyntax.parse!("label:every--every.to-")
+    assert_instance_of Operator, ast
+    assert_equal "label", ast.name
+    assert_equal "every--every.to-", ast.value
+  end
+
+  def test_label_with_dots_and_hyphens
+    # Complex label names with dots should work
+    ast = GmailSearchSyntax.parse!("label:cora-every--every.to-")
+    assert_instance_of Operator, ast
+    assert_equal "label", ast.name
+    assert_equal "cora-every--every.to-", ast.value
+  end
 end
