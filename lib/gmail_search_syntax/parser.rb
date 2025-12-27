@@ -129,11 +129,11 @@ module GmailSearchSyntax
       when :quoted_string
         value = current_token.value
         advance
-        AST::Substring.new(value)
+        AST::ExactWord.new(value)
       when :email, :number, :date, :relative_time
         value = current_token.value
         advance
-        AST::StringToken.new(value)
+        AST::LooseWord.new(value)
       else
         advance
         nil
@@ -183,7 +183,7 @@ module GmailSearchSyntax
       end
 
       advance
-      AST::StringToken.new(word)
+      AST::LooseWord.new(word)
     end
 
     def parse_operator_value

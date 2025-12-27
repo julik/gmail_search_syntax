@@ -8,6 +8,10 @@ module GmailSearchSyntax
       def attributes
         instance_variables.map { |var| instance_variable_get(var) }
       end
+
+      def short_class_name
+        self.class.name.split("::").last
+      end
     end
 
     class Operator < Node
@@ -19,11 +23,11 @@ module GmailSearchSyntax
       end
 
       def inspect
-        "#<Operator #{@name}: #{@value.inspect}>"
+        "#<#{short_class_name} #{@name}: #{@value.inspect}>"
       end
     end
 
-    class StringToken < Node
+    class LooseWord < Node
       attr_reader :value
 
       def initialize(value)
@@ -31,11 +35,11 @@ module GmailSearchSyntax
       end
 
       def inspect
-        "#<StringToken #{@value.inspect}>"
+        "#<#{short_class_name} #{@value.inspect}>"
       end
     end
 
-    class Substring < Node
+    class ExactWord < Node
       attr_reader :value
 
       def initialize(value)
@@ -43,7 +47,7 @@ module GmailSearchSyntax
       end
 
       def inspect
-        "#<Substring #{@value.inspect}>"
+        "#<#{short_class_name} #{@value.inspect}>"
       end
     end
 
@@ -55,7 +59,7 @@ module GmailSearchSyntax
       end
 
       def inspect
-        "#<And #{@operands.map(&:inspect).join(" AND ")}>"
+        "#<#{short_class_name} #{@operands.map(&:inspect).join(" AND ")}>"
       end
     end
 
@@ -67,7 +71,7 @@ module GmailSearchSyntax
       end
 
       def inspect
-        "#<Or #{@operands.map(&:inspect).join(" OR ")}>"
+        "#<#{short_class_name} #{@operands.map(&:inspect).join(" OR ")}>"
       end
     end
 
@@ -79,7 +83,7 @@ module GmailSearchSyntax
       end
 
       def inspect
-        "#<Not #{@child.inspect}>"
+        "#<#{short_class_name} #{@child.inspect}>"
       end
     end
 
@@ -91,7 +95,7 @@ module GmailSearchSyntax
       end
 
       def inspect
-        "#<Group #{@children.inspect}>"
+        "#<#{short_class_name} #{@children.inspect}>"
       end
     end
 
@@ -105,7 +109,7 @@ module GmailSearchSyntax
       end
 
       def inspect
-        "#<Around #{@left.inspect} AROUND #{@distance} #{@right.inspect}>"
+        "#<#{short_class_name} #{@left.inspect} AROUND #{@distance} #{@right.inspect}>"
       end
     end
   end

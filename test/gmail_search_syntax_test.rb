@@ -15,7 +15,7 @@ class GmailSearchSyntaxTest < Minitest::Test
               # This is an Operator specification
               assert_operator(expected_operand, actual_value[index])
             elsif expected_operand.key?(:value)
-              # This is a StringToken specification
+              # This is a LooseWord specification
               assert_string_token(expected_operand, actual_value[index])
             else
               # Generic node assertion
@@ -34,10 +34,10 @@ class GmailSearchSyntaxTest < Minitest::Test
   end
 
   def assert_string_token(expected_properties, actual_string_token)
-    assert_instance_of StringToken, actual_string_token, "Expected StringToken, got #{actual_string_token.class}"
+    assert_instance_of LooseWord, actual_string_token, "Expected LooseWord, got #{actual_string_token.class}"
     expected_properties.each do |property, expected_value|
       actual_value = actual_string_token.public_send(property)
-      assert_equal expected_value, actual_value, "StringToken: expected #{property} to be #{expected_value.inspect}, got #{actual_value.inspect}"
+      assert_equal expected_value, actual_value, "LooseWord: expected #{property} to be #{expected_value.inspect}, got #{actual_value.inspect}"
     end
   end
 
@@ -134,11 +134,11 @@ class GmailSearchSyntaxTest < Minitest::Test
     assert_instance_of And, ast
 
     assert_equal 2, ast.operands.length
-    assert_instance_of StringToken, ast.operands[0]
+    assert_instance_of LooseWord, ast.operands[0]
     assert_equal "dinner", ast.operands[0].value
 
     assert_instance_of Not, ast.operands[1]
-    assert_instance_of StringToken, ast.operands[1].child
+    assert_instance_of LooseWord, ast.operands[1].child
     assert_equal "movie", ast.operands[1].child.value
   end
 
@@ -152,10 +152,10 @@ class GmailSearchSyntaxTest < Minitest::Test
     assert_instance_of And, ast
 
     assert_equal 2, ast.operands.length
-    assert_instance_of StringToken, ast.operands[0]
+    assert_instance_of LooseWord, ast.operands[0]
     assert_equal "some", ast.operands[0].value
 
-    assert_instance_of StringToken, ast.operands[1]
+    assert_instance_of LooseWord, ast.operands[1]
     assert_equal "outfit", ast.operands[1].value
   end
 
@@ -186,7 +186,7 @@ class GmailSearchSyntaxTest < Minitest::Test
     assert_instance_of And, ast
 
     assert_equal 2, ast.operands.length
-    assert_instance_of StringToken, ast.operands[0]
+    assert_instance_of LooseWord, ast.operands[0]
     assert_equal "cats", ast.operands[0].value
 
     assert_instance_of Not, ast.operands[1]
@@ -239,17 +239,17 @@ class GmailSearchSyntaxTest < Minitest::Test
     ast = GmailSearchSyntax.parse!("holiday AROUND 10 vacation")
     assert_instance_of Around, ast
 
-    assert_instance_of StringToken, ast.left
+    assert_instance_of LooseWord, ast.left
     assert_equal "holiday", ast.left.value
     assert_equal 10, ast.distance
 
-    assert_instance_of StringToken, ast.right
+    assert_instance_of LooseWord, ast.right
     assert_equal "vacation", ast.right.value
   end
 
   def test_around_with_quoted_string
     ast = GmailSearchSyntax.parse!('"secret AROUND 25 birthday"')
-    assert_instance_of Substring, ast
+    assert_instance_of ExactWord, ast
     assert_equal "secret AROUND 25 birthday", ast.value
   end
 
@@ -280,7 +280,7 @@ class GmailSearchSyntaxTest < Minitest::Test
 
   def test_quoted_exact_phrase
     ast = GmailSearchSyntax.parse!('"dinner and movie tonight"')
-    assert_instance_of Substring, ast
+    assert_instance_of ExactWord, ast
     assert_equal "dinner and movie tonight", ast.value
   end
 
@@ -389,7 +389,7 @@ class GmailSearchSyntaxTest < Minitest::Test
 
   def test_plain_text_search
     ast = GmailSearchSyntax.parse!("meeting")
-    assert_instance_of StringToken, ast
+    assert_instance_of LooseWord, ast
     assert_equal "meeting", ast.value
   end
 
@@ -398,10 +398,10 @@ class GmailSearchSyntaxTest < Minitest::Test
     assert_instance_of And, ast
 
     assert_equal 2, ast.operands.length
-    assert_instance_of StringToken, ast.operands[0]
+    assert_instance_of LooseWord, ast.operands[0]
     assert_equal "project", ast.operands[0].value
 
-    assert_instance_of StringToken, ast.operands[1]
+    assert_instance_of LooseWord, ast.operands[1]
     assert_equal "report", ast.operands[1].value
   end
 
@@ -479,7 +479,7 @@ class GmailSearchSyntaxTest < Minitest::Test
 
   def test_quoted_string_with_operators_inside
     ast = GmailSearchSyntax.parse!('"from:amy to:bob"')
-    assert_instance_of Substring, ast
+    assert_instance_of ExactWord, ast
     assert_equal "from:amy to:bob", ast.value
   end
 
@@ -516,7 +516,7 @@ class GmailSearchSyntaxTest < Minitest::Test
 
   def test_parentheses_with_single_term
     ast = GmailSearchSyntax.parse!("(meeting)")
-    assert_instance_of StringToken, ast
+    assert_instance_of LooseWord, ast
     assert_equal "meeting", ast.value
   end
 
@@ -534,10 +534,10 @@ class GmailSearchSyntaxTest < Minitest::Test
     assert_instance_of And, ast
 
     assert_equal 2, ast.operands.length
-    assert_instance_of StringToken, ast.operands[0]
+    assert_instance_of LooseWord, ast.operands[0]
     assert_equal "meeting", ast.operands[0].value
 
-    assert_instance_of StringToken, ast.operands[1]
+    assert_instance_of LooseWord, ast.operands[1]
     assert_equal "project", ast.operands[1].value
   end
 
@@ -630,7 +630,7 @@ class GmailSearchSyntaxTest < Minitest::Test
     assert_equal 2, ast.value.operands[0].operands.length
     assert_equal "urgent", ast.value.operands[0].operands[0].value
     assert_equal "important", ast.value.operands[0].operands[1].value
-    assert_instance_of StringToken, ast.value.operands[1]
+    assert_instance_of LooseWord, ast.value.operands[1]
     assert_equal "meeting", ast.value.operands[1].value
   end
 
@@ -712,13 +712,13 @@ class GmailSearchSyntaxTest < Minitest::Test
 
   def test_quoted_string_with_escaped_quotes
     ast = GmailSearchSyntax.parse!('"She said \\"hello\\" to me"')
-    assert_instance_of Substring, ast
+    assert_instance_of ExactWord, ast
     assert_equal 'She said "hello" to me', ast.value
   end
 
   def test_quoted_string_with_escaped_backslash
     ast = GmailSearchSyntax.parse!('"path\\\\to\\\\file"')
-    assert_instance_of Substring, ast
+    assert_instance_of ExactWord, ast
     assert_equal 'path\\to\\file', ast.value
   end
 
@@ -731,13 +731,13 @@ class GmailSearchSyntaxTest < Minitest::Test
 
   def test_unquoted_text_with_escaped_quote
     ast = GmailSearchSyntax.parse!('meeting\\"room')
-    assert_instance_of StringToken, ast
+    assert_instance_of LooseWord, ast
     assert_equal 'meeting"room', ast.value
   end
 
   def test_unquoted_text_with_escaped_backslash
     ast = GmailSearchSyntax.parse!('path\\\\to\\\\file')
-    assert_instance_of StringToken, ast
+    assert_instance_of LooseWord, ast
     assert_equal 'path\\to\\file', ast.value
   end
 
@@ -772,7 +772,7 @@ class GmailSearchSyntaxTest < Minitest::Test
     assert_equal "Cora/Google", ast.operands[0].value
 
     # "Drive" becomes a separate search term
-    assert_instance_of StringToken, ast.operands[1]
+    assert_instance_of LooseWord, ast.operands[1]
     assert_equal "Drive", ast.operands[1].value
 
     # Second operator parsed correctly
@@ -871,5 +871,25 @@ class GmailSearchSyntaxTest < Minitest::Test
     assert_instance_of Operator, ast
     assert_equal "label", ast.name
     assert_equal "cora-every--every.to-", ast.value
+  end
+
+  def test_quoted_word_with_or_group
+    # Quoted word followed by OR group in parentheses
+    ast = GmailSearchSyntax.parse!('"dropbox" (file OR share OR sync OR storage OR cloud)')
+    assert_instance_of And, ast
+    assert_equal 2, ast.operands.length
+
+    # First operand: quoted "dropbox" as ExactWord
+    assert_instance_of ExactWord, ast.operands[0]
+    assert_equal "dropbox", ast.operands[0].value
+
+    # Second operand: OR group with 5 terms
+    assert_instance_of Or, ast.operands[1]
+    assert_equal 5, ast.operands[1].operands.length
+    assert_equal "file", ast.operands[1].operands[0].value
+    assert_equal "share", ast.operands[1].operands[1].value
+    assert_equal "sync", ast.operands[1].operands[2].value
+    assert_equal "storage", ast.operands[1].operands[3].value
+    assert_equal "cloud", ast.operands[1].operands[4].value
   end
 end

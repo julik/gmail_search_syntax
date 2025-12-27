@@ -3,11 +3,11 @@
 require_relative "../lib/gmail_search_syntax"
 
 puts "=" * 80
-puts "StringToken vs Substring Demo"
+puts "LooseWord vs ExactWord Demo"
 puts "=" * 80
 puts
 
-# Example 1: Unquoted text (StringToken node) - word boundary matching
+# Example 1: Unquoted text (LooseWord node) - word boundary matching
 puts "1. Unquoted text: meeting"
 puts "-" * 40
 query1 = "meeting"
@@ -27,7 +27,7 @@ puts "  - Will match: 'meeting tomorrow', 'the meeting', 'just a meeting here'"
 puts "  - Will NOT match: 'meetings', 'premeeting', 'meetingroom'"
 puts
 
-# Example 2: Quoted text (Substring node) - substring matching
+# Example 2: Quoted text (ExactWord node) - substring matching
 puts "2. Quoted text: \"meeting\""
 puts "-" * 40
 query2 = '"meeting"'
@@ -88,6 +88,6 @@ puts
 puts "=" * 80
 puts "Summary"
 puts "=" * 80
-puts "StringToken node (unquoted):  Word boundary matching - finds complete words"
-puts "Substring node (quoted):      Substring matching - finds partial matches"
+puts "LooseWord node (unquoted):  Word boundary matching - finds complete words"
+puts "ExactWord node (quoted):      ExactWord matching - finds partial matches"
 puts "=" * 80

@@ -255,7 +255,7 @@ class SqlVisitorTest < Minitest::Test
   def test_quoted_text_search_uses_substring
     sql, params = parse_and_visit('"meeting"')
 
-    # Quoted strings create Substring nodes which use LIKE %value%
+    # Quoted strings create ExactWord nodes which use LIKE %value%
     assert_includes sql, "m0.subject LIKE ?"
     assert_includes sql, "m0.body LIKE ?"
     assert_equal ["%meeting%", "%meeting%"], params

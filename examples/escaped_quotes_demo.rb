@@ -8,7 +8,7 @@ puts "=" * 80
 puts
 
 # Example 1: Escaped quotes in a substring search
-puts "1. Substring with escaped quotes"
+puts "1. ExactWord with escaped quotes"
 puts "-" * 40
 query1 = '"She said \\"hello\\" to me"'
 puts "Input: #{query1}"
@@ -136,11 +136,11 @@ puts "Summary"
 puts "=" * 80
 puts "Escape sequences work in BOTH quoted and unquoted tokens:"
 puts
-puts "Quoted strings (Substring nodes):"
+puts "Quoted strings (ExactWord nodes):"
 puts "  - Use substring matching (LIKE %value%)"
 puts "  - \"She said \\\"hello\\\"\" → 'She said \"hello\"'"
 puts
-puts "Unquoted tokens (StringToken nodes):"
+puts "Unquoted tokens (LooseWord nodes):"
 puts "  - Use word boundary matching (= or LIKE with boundaries)"
 puts "  - meeting\\\"room → 'meeting\"room'"
 puts "  - path\\\\to\\\\file → 'path\\to\\file'"
